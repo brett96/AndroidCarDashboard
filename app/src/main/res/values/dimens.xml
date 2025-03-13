@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <dimen name="fab_margin">16dp</dimen>
     <dimen name="fragment_horizontal_margin">16dp</dimen>
@@ -6,4 +7,15 @@
     <dimen name="reflow_text_block_horizontal_gap">8dp</dimen>
     <dimen name="reflow_text_title_size">22sp</dimen>
     <dimen name="reflow_text_description_size">13sp</dimen>
+    <!-- Default dimensions for phones -->
+    <dimen name="gauge_height_small">100dp</dimen>
+    <dimen name="gauge_height_progress_small">80dp</dimen>
+    
+    <!-- Expanded gauge dimensions -->
+    <dimen name="gauge_height_expanded">160dp</dimen>
+    <dimen name="gauge_height_progress_expanded">120dp</dimen>
+    
+    <!-- Card elevations -->
+    <dimen name="default_card_elevation">2dp</dimen>
+    <dimen name="expanded_card_elevation">8dp</dimen>
 </resources>

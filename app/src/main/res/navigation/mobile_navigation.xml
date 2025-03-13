@@ -3,25 +3,25 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/mobile_navigation"
-    app:startDestination="@+id/nav_transform">
+    app:startDestination="@+id/nav_dashboard">
 
     <fragment
-        android:id="@+id/nav_transform"
-        android:name="com.example.cardashboardtest.ui.transform.TransformFragment"
-        android:label="@string/menu_transform"
-        tools:layout="@layout/fragment_transform" />
+        android:id="@+id/nav_dashboard"
+        android:name="com.example.cardashboardtest.ui.dashboard.DashboardFragment"
+        android:label="@string/menu_dashboard"
+        tools:layout="@layout/fragment_dashboard" />
 
     <fragment
-        android:id="@+id/nav_reflow"
-        android:name="com.example.cardashboardtest.ui.reflow.ReflowFragment"
-        android:label="@string/menu_reflow"
-        tools:layout="@layout/fragment_reflow" />
+        android:id="@+id/nav_navigation"
+        android:name="com.example.cardashboardtest.ui.navigation.NavigationFragment"
+        android:label="@string/menu_navigation"
+        tools:layout="@layout/fragment_navigation" />
 
     <fragment
-        android:id="@+id/nav_slideshow"
-        android:name="com.example.cardashboardtest.ui.slideshow.SlideshowFragment"
-        android:label="@string/menu_slideshow"
-        tools:layout="@layout/fragment_slideshow" />
+        android:id="@+id/nav_media"
+        android:name="com.example.cardashboardtest.ui.media.MediaFragment"
+        android:label="@string/menu_media"
+        tools:layout="@layout/fragment_media" />
 
     <fragment
         android:id="@+id/nav_settings"
