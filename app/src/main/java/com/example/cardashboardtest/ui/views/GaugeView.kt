@@ -65,6 +65,10 @@ class GaugeView @JvmOverloads constructor(
     private var unitColor = Color.LTGRAY
     private var needleColor = Color.RED
 
+    private var majorTickLength = 20f
+    private var minorTickLength = 10f
+    private var labelOffset = 40f
+
     init {
         // Set up paints
         rimPaint.color = rimColor
@@ -116,15 +120,21 @@ class GaugeView @JvmOverloads constructor(
         centerY = h / 2f
         radius = (size / 2f) - rimWidth
         
-        // Adjust text sizes based on gauge size
-        titlePaint.textSize = radius * 0.15f
-        valuePaint.textSize = radius * 0.3f
-        unitPaint.textSize = radius * 0.12f
+        // Adjust text sizes based on gauge size with better proportions
+        titlePaint.textSize = radius * 0.12f
+        valuePaint.textSize = radius * 0.25f
+        unitPaint.textSize = radius * 0.10f
+        scalePaint.textSize = radius * 0.08f
         
-        // Adjust stroke widths
-        rimPaint.strokeWidth = radius * 0.05f
-        scalePaint.strokeWidth = radius * 0.02f
-        needlePaint.strokeWidth = radius * 0.04f
+        // Adjust stroke widths with better proportions
+        rimPaint.strokeWidth = radius * 0.04f
+        scalePaint.strokeWidth = radius * 0.015f
+        needlePaint.strokeWidth = radius * 0.03f
+        
+        // Adjust tick lengths
+        majorTickLength = radius * 0.15f
+        minorTickLength = radius * 0.08f
+        labelOffset = radius * 0.25f
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -168,8 +178,8 @@ class GaugeView @JvmOverloads constructor(
             val angle = valueToAngle(value)
             
             // Calculate start and end points for tick
-            val startX = centerX + (radius - rimWidth - 20) * cos(Math.toRadians(angle.toDouble())).toFloat()
-            val startY = centerY + (radius - rimWidth - 20) * sin(Math.toRadians(angle.toDouble())).toFloat()
+            val startX = centerX + (radius - rimWidth - majorTickLength) * cos(Math.toRadians(angle.toDouble())).toFloat()
+            val startY = centerY + (radius - rimWidth - majorTickLength) * sin(Math.toRadians(angle.toDouble())).toFloat()
             val endX = centerX + (radius - rimWidth) * cos(Math.toRadians(angle.toDouble())).toFloat()
             val endY = centerY + (radius - rimWidth) * sin(Math.toRadians(angle.toDouble())).toFloat()
             
@@ -177,8 +187,8 @@ class GaugeView @JvmOverloads constructor(
             canvas.drawLine(startX, startY, endX, endY, scalePaint)
             
             // Draw tick label
-            val labelX = centerX + (radius - rimWidth - 40) * cos(Math.toRadians(angle.toDouble())).toFloat()
-            val labelY = centerY + (radius - rimWidth - 40) * sin(Math.toRadians(angle.toDouble())).toFloat()
+            val labelX = centerX + (radius - rimWidth - labelOffset) * cos(Math.toRadians(angle.toDouble())).toFloat()
+            val labelY = centerY + (radius - rimWidth - labelOffset) * sin(Math.toRadians(angle.toDouble())).toFloat()
             
             canvas.drawText(value.toInt().toString(), labelX, labelY, scalePaint)
         }
@@ -194,8 +204,8 @@ class GaugeView @JvmOverloads constructor(
                 val angle = valueToAngle(value)
                 
                 // Calculate start and end points for tick
-                val startX = centerX + (radius - rimWidth - 10) * cos(Math.toRadians(angle.toDouble())).toFloat()
-                val startY = centerY + (radius - rimWidth - 10) * sin(Math.toRadians(angle.toDouble())).toFloat()
+                val startX = centerX + (radius - rimWidth - minorTickLength) * cos(Math.toRadians(angle.toDouble())).toFloat()
+                val startY = centerY + (radius - rimWidth - minorTickLength) * sin(Math.toRadians(angle.toDouble())).toFloat()
                 val endX = centerX + (radius - rimWidth) * cos(Math.toRadians(angle.toDouble())).toFloat()
                 val endY = centerY + (radius - rimWidth) * sin(Math.toRadians(angle.toDouble())).toFloat()
                 

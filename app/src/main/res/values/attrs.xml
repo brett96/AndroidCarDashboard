@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Attributes for GaugeView -->
+    <declare-styleable name="GaugeView">
+        <attr name="minValue" format="float" />
+        <attr name="maxValue" format="float" />
+        <attr name="gaugeTitle" format="string" />
+        <attr name="unit" format="string" />
+        <attr name="needleColor" format="color" />
+    </declare-styleable>
+
+    <!-- Attributes for ProgressGaugeView -->
+    <declare-styleable name="ProgressGaugeView">
+        <attr name="maxProgress" format="float" />
+        <attr name="gaugeTitle" />
+        <attr name="progressColor" format="color" />
+    </declare-styleable>
+</resources>

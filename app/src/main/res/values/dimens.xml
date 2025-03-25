@@ -7,13 +7,18 @@
     <dimen name="reflow_text_block_horizontal_gap">8dp</dimen>
     <dimen name="reflow_text_title_size">22sp</dimen>
     <dimen name="reflow_text_description_size">13sp</dimen>
+    
     <!-- Default dimensions for phones -->
-    <dimen name="gauge_height_small">100dp</dimen>
-    <dimen name="gauge_height_progress_small">80dp</dimen>
+    <dimen name="gauge_height_small">120dp</dimen>
+    <dimen name="gauge_height_progress_small">100dp</dimen>
+    <dimen name="gauge_text_size_small">16sp</dimen>
+    <dimen name="gauge_title_size_small">14sp</dimen>
     
     <!-- Expanded gauge dimensions -->
-    <dimen name="gauge_height_expanded">160dp</dimen>
-    <dimen name="gauge_height_progress_expanded">120dp</dimen>
+    <dimen name="gauge_height_expanded">180dp</dimen>
+    <dimen name="gauge_height_progress_expanded">140dp</dimen>
+    <dimen name="gauge_text_size_expanded">24sp</dimen>
+    <dimen name="gauge_title_size_expanded">18sp</dimen>
     
     <!-- Card elevations -->
     <dimen name="default_card_elevation">2dp</dimen>

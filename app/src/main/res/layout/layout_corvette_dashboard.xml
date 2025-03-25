@@ -1,0 +1,245 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/corvette_background">
+
+    <!-- Digital Speed Display -->
+    <androidx.cardview.widget.CardView
+        android:id="@+id/digitalSpeedCard"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:foreground="?attr/selectableItemBackground"
+        app:cardBackgroundColor="@color/corvette_gauge_background"
+        app:cardCornerRadius="8dp"
+        app:cardElevation="2dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <com.example.cardashboardtest.ui.views.DigitalSpeedView
+            android:id="@+id/digitalSpeedView"
+            android:layout_width="match_parent"
+            android:layout_height="120dp" />
+
+    </androidx.cardview.widget.CardView>
+
+    <!-- Digital RPM Bar Graph -->
+    <androidx.cardview.widget.CardView
+        android:id="@+id/digitalRpmCard"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:foreground="?attr/selectableItemBackground"
+        app:cardBackgroundColor="@color/corvette_gauge_background"
+        app:cardCornerRadius="8dp"
+        app:cardElevation="2dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/digitalSpeedCard">
+
+        <com.example.cardashboardtest.ui.views.DigitalRPMView
+            android:id="@+id/digitalRpmView"
+            android:layout_width="match_parent"
+            android:layout_height="40dp" />
+
+    </androidx.cardview.widget.CardView>
+
+    <!-- Additional Gauges Grid -->
+    <GridLayout
+        android:id="@+id/additionalGaugesGrid"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        android:columnCount="2"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/digitalRpmCard">
+
+        <!-- Fuel Level -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="0dp"
+            android:layout_height="100dp"
+            android:layout_columnWeight="1"
+            android:layout_margin="4dp"
+            app:cardBackgroundColor="@color/corvette_gauge_background"
+            app:cardCornerRadius="8dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:padding="8dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="FUEL"
+                    android:textAlignment="center"
+                    android:textColor="@color/corvette_text"
+                    android:textSize="14sp" />
+
+                <com.example.cardashboardtest.ui.views.ProgressGaugeView
+                    android:id="@+id/fuelGauge"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    app:progressColor="@color/corvette_accent" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Temperature -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="0dp"
+            android:layout_height="100dp"
+            android:layout_columnWeight="1"
+            android:layout_margin="4dp"
+            app:cardBackgroundColor="@color/corvette_gauge_background"
+            app:cardCornerRadius="8dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:padding="8dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="TEMP"
+                    android:textAlignment="center"
+                    android:textColor="@color/corvette_text"
+                    android:textSize="14sp" />
+
+                <com.example.cardashboardtest.ui.views.ProgressGaugeView
+                    android:id="@+id/tempGauge"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    app:progressColor="@color/corvette_accent" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Oil Pressure -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="0dp"
+            android:layout_height="100dp"
+            android:layout_columnWeight="1"
+            android:layout_margin="4dp"
+            app:cardBackgroundColor="@color/corvette_gauge_background"
+            app:cardCornerRadius="8dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:padding="8dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="OIL PSI"
+                    android:textAlignment="center"
+                    android:textColor="@color/corvette_text"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/oilPressureValue"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:text="45"
+                    android:textColor="@color/corvette_accent"
+                    android:textSize="24sp" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Battery Voltage -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="0dp"
+            android:layout_height="100dp"
+            android:layout_columnWeight="1"
+            android:layout_margin="4dp"
+            app:cardBackgroundColor="@color/corvette_gauge_background"
+            app:cardCornerRadius="8dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:padding="8dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="VOLTS"
+                    android:textAlignment="center"
+                    android:textColor="@color/corvette_text"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/voltageValue"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:text="14.4"
+                    android:textColor="@color/corvette_accent"
+                    android:textSize="24sp" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+    </GridLayout>
+
+    <!-- Warning Lights -->
+    <LinearLayout
+        android:id="@+id/warningLights"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        android:orientation="horizontal"
+        android:spacing="8dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/additionalGaugesGrid">
+
+        <TextView
+            android:id="@+id/checkGaugesWarning"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/warning_light_background"
+            android:padding="8dp"
+            android:text="CHECK GAUGES"
+            android:textColor="@color/corvette_warning"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/lowOilWarning"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:background="@drawable/warning_light_background"
+            android:padding="8dp"
+            android:text="LOW OIL"
+            android:textColor="@color/corvette_warning"
+            android:visibility="gone" />
+    </LinearLayout>
+
+    <!-- Controls Card -->
+    <include
+        android:id="@+id/controlsCard"
+        layout="@layout/layout_controls"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout> 

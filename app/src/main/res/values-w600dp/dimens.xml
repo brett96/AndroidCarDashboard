@@ -4,6 +4,8 @@
     <dimen name="fab_margin">48dp</dimen>
     <dimen name="item_transform_image_length">142dp</dimen>
     <!-- Dimensions for tablets (600dp and wider) -->
-    <dimen name="gauge_height_small">140dp</dimen>
-    <dimen name="gauge_height_progress_small">110dp</dimen>
+    <dimen name="gauge_height_small">160dp</dimen>
+    <dimen name="gauge_height_progress_small">130dp</dimen>
+    <dimen name="gauge_text_size_small">20sp</dimen>
+    <dimen name="gauge_title_size_small">16sp</dimen>
 </resources>

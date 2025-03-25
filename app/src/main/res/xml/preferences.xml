@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <PreferenceCategory android:title="Appearance">
+        <ListPreference
+            android:defaultValue="system"
+            android:entries="@array/app_theme_entries"
+            android:entryValues="@array/app_theme_values"
+            android:key="app_theme_preference"
+            android:summary="Choose light or dark theme"
+            android:title="App Theme" />
+
+        <ListPreference
+            android:defaultValue="modern"
+            android:entries="@array/dashboard_style_entries"
+            android:entryValues="@array/dashboard_style_values"
+            android:key="dashboard_style_preference"
+            android:summary="Choose dashboard visual style"
+            android:title="Dashboard Style" />
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="Units">
+        <ListPreference
+            android:defaultValue="mph"
+            android:entries="@array/speed_unit_entries"
+            android:entryValues="@array/speed_unit_values"
+            android:key="units_preference"
+            android:summary="Choose speed units"
+            android:title="Speed Units" />
+
+        <ListPreference
+            android:defaultValue="celsius"
+            android:entries="@array/temp_unit_entries"
+            android:entryValues="@array/temp_unit_values"
+            android:key="temp_unit_preference"
+            android:summary="Choose temperature units"
+            android:title="Temperature Units" />
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="Dashboard Elements">
+        <SwitchPreferenceCompat
+            android:defaultValue="true"
+            android:key="show_speed_preference"
+            android:summary="Show or hide the speedometer"
+            android:title="Show Speedometer" />
+
+        <SwitchPreferenceCompat
+            android:defaultValue="true"
+            android:key="show_rpm_preference"
+            android:summary="Show or hide the tachometer"
+            android:title="Show Tachometer" />
+
+        <SwitchPreferenceCompat
+            android:defaultValue="true"
+            android:key="show_fuel_preference"
+            android:summary="Show or hide the fuel gauge"
+            android:title="Show Fuel Gauge" />
+
+        <SwitchPreferenceCompat
+            android:defaultValue="true"
+            android:key="show_temp_preference"
+            android:summary="Show or hide the temperature gauge"
+            android:title="Show Temperature Gauge" />
+    </PreferenceCategory>
+</PreferenceScreen>

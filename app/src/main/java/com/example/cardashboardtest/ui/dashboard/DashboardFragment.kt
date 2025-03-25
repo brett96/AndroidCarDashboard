@@ -14,10 +14,13 @@ import android.view.ViewGroup
 import android.widget.CompoundButton
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.appcompat.app.AppCompatActivity
 import androidx.cardview.widget.CardView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import com.example.cardashboardtest.R
+import com.example.cardashboardtest.bluetooth.BluetoothDeviceDialog
+import com.example.cardashboardtest.bluetooth.ObdBluetoothService
 import com.example.cardashboardtest.databinding.FragmentDashboardBinding
 import com.example.cardashboardtest.model.CarData
 import com.example.cardashboardtest.ui.theme.DashboardTheme
@@ -33,6 +36,14 @@ import java.util.Locale
 import java.util.Random
 import java.util.Timer
 import java.util.TimerTask
+import com.google.android.material.snackbar.Snackbar
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 
 class DashboardFragment : Fragment() {
 
@@ -43,6 +54,34 @@ class DashboardFragment : Fragment() {
     private var timer: Timer? = null
     private lateinit var themePreferences: ThemePreferences
     private var currentTheme: DashboardTheme? = null
+
+    private val bluetoothPermissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        arrayOf(
+            Manifest.permission.BLUETOOTH_SCAN,
+            Manifest.permission.BLUETOOTH_CONNECT,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        )
+    } else {
+        arrayOf(
+            Manifest.permission.BLUETOOTH,
+            Manifest.permission.BLUETOOTH_ADMIN,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        )
+    }
+
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        if (permissions.all { it.value }) {
+            // All permissions granted, proceed with Bluetooth connection
+            proceedWithBluetoothConnection()
+        } else {
+            showError(
+                "Permission Required",
+                "Bluetooth permissions are required to connect to OBD device"
+            )
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -78,10 +117,48 @@ class DashboardFragment : Fragment() {
     }
 
     @Deprecated("Deprecated in Java")
+    override fun onPrepareOptionsMenu(menu: Menu) {
+        super.onPrepareOptionsMenu(menu)
+        val connectItem = menu.findItem(R.id.action_bluetooth_connect)
+        val disconnectItem = menu.findItem(R.id.action_bluetooth_disconnect)
+
+        when (viewModel.connectionState.value) {
+            is ObdBluetoothService.ConnectionState.Connected -> {
+                connectItem?.isVisible = false
+                disconnectItem?.isVisible = true
+            }
+            is ObdBluetoothService.ConnectionState.Disconnected -> {
+                connectItem?.isVisible = true
+                disconnectItem?.isVisible = false
+            }
+            is ObdBluetoothService.ConnectionState.Error -> {
+                connectItem?.isVisible = true
+                disconnectItem?.isVisible = false
+            }
+            is ObdBluetoothService.ConnectionState.Connecting -> {
+                connectItem?.isVisible = false
+                disconnectItem?.isVisible = false
+            }
+            else -> {
+                connectItem?.isVisible = true
+                disconnectItem?.isVisible = false
+            }
+        }
+    }
+
+    @Deprecated("Deprecated in Java")
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.action_change_theme -> {
                 showThemeSelectionDialog()
+                true
+            }
+            R.id.action_bluetooth_connect -> {
+                showBluetoothDeviceDialog()
+                true
+            }
+            R.id.action_bluetooth_disconnect -> {
+                viewModel.disconnectDevice()
                 true
             }
             else -> super.onOptionsItemSelected(item)
@@ -247,6 +324,11 @@ class DashboardFragment : Fragment() {
 
     private fun setupObservers() {
         val dashboardContent = binding.root.findViewById<ViewGroup>(R.id.dashboard_content)
+
+        // Observe connection state
+        viewModel.connectionState.observe(viewLifecycleOwner) { state ->
+            updateConnectionState(state)
+        }
 
         // Observe speed changes
         viewModel.speed.observe(viewLifecycleOwner) { speed ->
@@ -633,6 +715,71 @@ class DashboardFragment : Fragment() {
             }
             else -> {}
         }
+    }
+
+    private fun checkAndRequestBluetoothPermissions() {
+        val missingPermissions = bluetoothPermissions.filter {
+            ContextCompat.checkSelfPermission(requireContext(), it) != PackageManager.PERMISSION_GRANTED
+        }
+
+        when {
+            missingPermissions.isEmpty() -> {
+                // All permissions are granted, proceed with Bluetooth connection
+                proceedWithBluetoothConnection()
+            }
+            else -> {
+                // Request the missing permissions
+                requestPermissionLauncher.launch(missingPermissions.toTypedArray())
+            }
+        }
+    }
+
+    private fun proceedWithBluetoothConnection() {
+        val devices = viewModel.scanForDevices()
+        if (devices.isEmpty()) {
+            showError("No paired OBD devices found", "Please pair your OBD device in Bluetooth settings first.")
+            return
+        }
+
+        val dialog = BluetoothDeviceDialog.newInstance()
+        dialog.setDevices(devices)
+        dialog.setDeviceSelectedListener { device ->
+            viewModel.connectToDevice(device)
+        }
+        dialog.show(parentFragmentManager, "bluetooth_device_selection")
+    }
+
+    private fun showBluetoothDeviceDialog() {
+        checkAndRequestBluetoothPermissions()
+    }
+
+    private fun showError(title: String, message: String) {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(title)
+            .setMessage(message)
+            .setPositiveButton("OK", null)
+            .show()
+    }
+
+    private fun updateConnectionState(state: ObdBluetoothService.ConnectionState) {
+        activity?.invalidateOptionsMenu() // This will trigger onPrepareOptionsMenu
+
+        when (state) {
+            is ObdBluetoothService.ConnectionState.Connected -> {
+                showSnackbar("Connected to ${state.deviceName}")
+            }
+            is ObdBluetoothService.ConnectionState.Error -> {
+                showError("Connection Error", state.message)
+            }
+            is ObdBluetoothService.ConnectionState.Connecting -> {
+                showSnackbar("Connecting to OBD device...")
+            }
+            else -> {}
+        }
+    }
+
+    private fun showSnackbar(message: String) {
+        Snackbar.make(binding.root, message, Snackbar.LENGTH_SHORT).show()
     }
 
     override fun onDestroyView() {

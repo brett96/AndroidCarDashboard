@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Theme preferences -->
+    <string-array name="theme_entries">
+        <item>Dark Theme</item>
+        <item>Light Theme</item>
+        <item>Auto (System Default)</item>
+    </string-array>
+    <string-array name="theme_values">
+        <item>dark</item>
+        <item>light</item>
+        <item>auto</item>
+    </string-array>
+
+    <!-- Speed unit preferences -->
+    <string-array name="speed_unit_entries">
+        <item>Miles per hour (MPH)</item>
+        <item>Kilometers per hour (KM/H)</item>
+    </string-array>
+    <string-array name="speed_unit_values">
+        <item>mph</item>
+        <item>kmh</item>
+    </string-array>
+
+    <!-- Temperature unit preferences -->
+    <string-array name="temp_unit_entries">
+        <item>Celsius (°C)</item>
+        <item>Fahrenheit (°F)</item>
+    </string-array>
+    <string-array name="temp_unit_values">
+        <item>celsius</item>
+        <item>fahrenheit</item>
+    </string-array>
+
+    <string-array name="app_theme_entries">
+        <item>System Default</item>
+        <item>Light</item>
+        <item>Dark</item>
+    </string-array>
+
+    <string-array name="app_theme_values">
+        <item>system</item>
+        <item>light</item>
+        <item>dark</item>
+    </string-array>
+
+    <string-array name="dashboard_style_entries">
+        <item>Modern</item>
+        <item>1985 Corvette</item>
+    </string-array>
+
+    <string-array name="dashboard_style_values">
+        <item>modern</item>
+        <item>corvette_1985</item>
+    </string-array>
+</resources>
