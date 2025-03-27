@@ -5,6 +5,9 @@ import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothSocket
 import android.content.Context
 import android.util.Log
+import com.example.cardashboardtest.data.BluetoothLogRepository
+import com.example.cardashboardtest.model.BluetoothLog
+import com.example.cardashboardtest.model.LogType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -14,6 +17,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.isActive
 import java.io.IOException
+import java.util.Date
 import java.util.UUID
 import kotlin.math.exp
 
@@ -26,8 +30,10 @@ class ObdBluetoothService(private val context: Context) {
     private var connectedDevice: BluetoothDevice? = null
     private var connectionJob: Job? = null
     private var dataPollingJob: Job? = null
+    private var connectionStartTime: Long? = null
     
     private val coroutineScope = CoroutineScope(Dispatchers.IO)
+    private val logRepository = BluetoothLogRepository(context)
     
     // Connection state
     private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
@@ -44,7 +50,13 @@ class ObdBluetoothService(private val context: Context) {
     private val voltageSmoother = DataSmoother(10)
     
     fun scanForDevices(): List<BluetoothDevice> {
-        return bluetoothAdapter?.bondedDevices?.toList() ?: emptyList()
+        val devices = bluetoothAdapter?.bondedDevices?.toList() ?: emptyList()
+        coroutineScope.launch {
+            devices.forEach { device ->
+                logDeviceFound(device)
+            }
+        }
+        return devices
     }
     
     fun connect(device: BluetoothDevice) {
@@ -52,13 +64,16 @@ class ObdBluetoothService(private val context: Context) {
         connectionJob = coroutineScope.launch {
             try {
                 _connectionState.value = ConnectionState.Connecting
+                logConnectionAttempt(device)
                 
                 bluetoothSocket = device.createRfcommSocketToServiceRecord(SPP_UUID)
                 bluetoothSocket?.connect()
                 
                 if (bluetoothSocket?.isConnected == true) {
                     connectedDevice = device
+                    connectionStartTime = System.currentTimeMillis()
                     _connectionState.value = ConnectionState.Connected(device.name ?: "Unknown Device")
+                    logConnectionSuccess(device)
                     initializeObd()
                     startDataPolling()
                 } else {
@@ -66,6 +81,7 @@ class ObdBluetoothService(private val context: Context) {
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Connection failed", e)
+                logConnectionError(device, e)
                 _connectionState.value = ConnectionState.Error("Connection failed: ${e.message}")
                 disconnect()
             }
@@ -73,41 +89,27 @@ class ObdBluetoothService(private val context: Context) {
     }
     
     fun disconnect() {
-        try {
-            dataPollingJob?.cancel()
-            connectionJob?.cancel()
-            
-            // Wait for jobs to complete
-            coroutineScope.launch {
-                try {
-                    dataPollingJob?.join()
-                    connectionJob?.join()
-                } catch (e: Exception) {
-                    Log.d(TAG, "Error waiting for jobs to complete", e)
-                }
-            }
-            
+        dataPollingJob?.cancel()
+        connectionJob?.cancel()
+        
+        coroutineScope.launch {
             try {
                 bluetoothSocket?.close()
+                connectedDevice?.let { device ->
+                    val duration = connectionStartTime?.let { System.currentTimeMillis() - it }
+                    logDisconnect(device, duration)
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "Error closing socket", e)
+                connectedDevice?.let { device ->
+                    logError(device, "Error closing socket: ${e.message}")
+                }
             }
             
             bluetoothSocket = null
             connectedDevice = null
+            connectionStartTime = null
             _connectionState.value = ConnectionState.Disconnected
-            
-            // Reset data smoothers
-            speedSmoother.reset()
-            rpmSmoother.reset()
-            tempSmoother.reset()
-            voltageSmoother.reset()
-            
-            // Reset OBD data
-            _obdData.value = ObdData()
-            
-        } catch (e: Exception) {
-            Log.e(TAG, "Error during disconnect", e)
         }
     }
     
@@ -155,8 +157,15 @@ class ObdBluetoothService(private val context: Context) {
             if (response == null || response.contains("NO DATA") || response.contains("ERROR")) {
                 throw IOException("Failed to initialize OBD connection")
             }
+            
+            connectedDevice?.let { device ->
+                logDataRead(device, "OBD initialization successful")
+            }
         } catch (e: Exception) {
             Log.e(TAG, "OBD initialization failed", e)
+            connectedDevice?.let { device ->
+                logError(device, "OBD initialization failed: ${e.message}")
+            }
             throw e
         }
     }
@@ -175,6 +184,9 @@ class ObdBluetoothService(private val context: Context) {
                             break
                         }
                         Log.e(TAG, "Error polling OBD data", e)
+                        connectedDevice?.let { device ->
+                            logError(device, "Data polling error: ${e.message}")
+                        }
                         _connectionState.value = ConnectionState.Error("Data reading error: ${e.message}")
                         break
                     }
@@ -207,13 +219,18 @@ class ObdBluetoothService(private val context: Context) {
                 currentData.batteryVoltage != null || currentData.checkEngine != null || 
                 currentData.oilTemp != null) {
                 _obdData.value = currentData
-                Log.d(TAG, "Updated OBD data: $currentData")
+                connectedDevice?.let { device ->
+                    logDataRead(device, "Data updated: RPM=${currentData.rpm}, Speed=${currentData.speed}, Temp=${currentData.engineTemp}")
+                }
             }
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) {
                 throw e
             }
             Log.e(TAG, "Error in pollObdData", e)
+            connectedDevice?.let { device ->
+                logError(device, "Data polling error: ${e.message}")
+            }
             throw e
         }
     }
@@ -233,6 +250,9 @@ class ObdBluetoothService(private val context: Context) {
             // Check for errors
             if (response.contains("STOPPED")) {
                 Log.w(TAG, "Device stopped, attempting to reconnect")
+                connectedDevice?.let { device ->
+                    logError(device, "Device stopped")
+                }
                 reconnect()
                 return null
             }
@@ -240,12 +260,18 @@ class ObdBluetoothService(private val context: Context) {
             // Check for negative response
             if (response.contains("7F")) {
                 Log.w(TAG, "Negative response received for command: $command")
+                connectedDevice?.let { device ->
+                    logError(device, "Negative response for command: $command")
+                }
                 return null
             }
             
             response
         } catch (e: Exception) {
             Log.e(TAG, "Error sending command: $command", e)
+            connectedDevice?.let { device ->
+                logError(device, "Command error: ${e.message}")
+            }
             null
         }
     }
@@ -292,6 +318,9 @@ class ObdBluetoothService(private val context: Context) {
             connectedDevice?.let { connect(it) }
         } catch (e: Exception) {
             Log.e(TAG, "Error reconnecting", e)
+            connectedDevice?.let { device ->
+                logError(device, "Reconnection failed: ${e.message}")
+            }
             _connectionState.value = ConnectionState.Error("Reconnection failed: ${e.message}")
         }
     }
@@ -315,6 +344,92 @@ class ObdBluetoothService(private val context: Context) {
         } catch (e: Exception) {
             0
         }
+    }
+    
+    // Logging functions
+    private suspend fun logDeviceFound(device: BluetoothDevice) {
+        logRepository.insertLog(
+            BluetoothLog(
+                timestamp = Date(),
+                deviceName = device.name,
+                deviceAddress = device.address,
+                logType = LogType.DEVICE_FOUND,
+                message = "Device found: ${device.name ?: "Unknown Device"}"
+            )
+        )
+    }
+    
+    private suspend fun logConnectionAttempt(device: BluetoothDevice) {
+        logRepository.insertLog(
+            BluetoothLog(
+                timestamp = Date(),
+                deviceName = device.name,
+                deviceAddress = device.address,
+                logType = LogType.CONNECT,
+                message = "Attempting to connect to device"
+            )
+        )
+    }
+    
+    private suspend fun logConnectionSuccess(device: BluetoothDevice) {
+        logRepository.insertLog(
+            BluetoothLog(
+                timestamp = Date(),
+                deviceName = device.name,
+                deviceAddress = device.address,
+                logType = LogType.CONNECT,
+                message = "Successfully connected to device"
+            )
+        )
+    }
+    
+    private suspend fun logConnectionError(device: BluetoothDevice, error: Exception) {
+        logRepository.insertLog(
+            BluetoothLog(
+                timestamp = Date(),
+                deviceName = device.name,
+                deviceAddress = device.address,
+                logType = LogType.ERROR,
+                message = "Connection error: ${error.message}"
+            )
+        )
+    }
+    
+    private suspend fun logDisconnect(device: BluetoothDevice, duration: Long?) {
+        logRepository.insertLog(
+            BluetoothLog(
+                timestamp = Date(),
+                deviceName = device.name,
+                deviceAddress = device.address,
+                logType = LogType.DISCONNECT,
+                message = "Disconnected from device",
+                connectionDuration = duration
+            )
+        )
+    }
+    
+    private suspend fun logDataRead(device: BluetoothDevice, message: String) {
+        logRepository.insertLog(
+            BluetoothLog(
+                timestamp = Date(),
+                deviceName = device.name,
+                deviceAddress = device.address,
+                logType = LogType.DATA_READ,
+                message = message
+            )
+        )
+    }
+    
+    private suspend fun logError(device: BluetoothDevice, message: String) {
+        logRepository.insertLog(
+            BluetoothLog(
+                timestamp = Date(),
+                deviceName = device.name,
+                deviceAddress = device.address,
+                logType = LogType.ERROR,
+                message = message
+            )
+        )
     }
     
     sealed class ConnectionState {

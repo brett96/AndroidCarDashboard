@@ -53,4 +53,33 @@
         <item>modern</item>
         <item>corvette_1985</item>
     </string-array>
+
+    <string-array name="update_intervals">
+        <item>500ms</item>
+        <item>1s</item>
+        <item>2s</item>
+        <item>5s</item>
+    </string-array>
+
+    <string-array name="update_interval_values">
+        <item>500</item>
+        <item>1000</item>
+        <item>2000</item>
+        <item>5000</item>
+    </string-array>
+
+    <string-array name="temperature_units">
+        <item>Celsius</item>
+        <item>Fahrenheit</item>
+    </string-array>
+
+    <string-array name="temperature_unit_values">
+        <item>celsius</item>
+        <item>fahrenheit</item>
+    </string-array>
+
+    <string-array name="speed_units">
+        <item>MPH</item>
+        <item>KM/H</item>
+    </string-array>
 </resources>

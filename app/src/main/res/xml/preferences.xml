@@ -1,64 +1,67 @@
 <?xml version="1.0" encoding="utf-8"?>
-<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
-    <PreferenceCategory android:title="Appearance">
-        <ListPreference
-            android:defaultValue="system"
-            android:entries="@array/app_theme_entries"
-            android:entryValues="@array/app_theme_values"
-            android:key="app_theme_preference"
-            android:summary="Choose light or dark theme"
-            android:title="App Theme" />
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
 
+    <PreferenceCategory android:title="Connection Settings">
         <ListPreference
-            android:defaultValue="modern"
-            android:entries="@array/dashboard_style_entries"
-            android:entryValues="@array/dashboard_style_values"
-            android:key="dashboard_style_preference"
-            android:summary="Choose dashboard visual style"
-            android:title="Dashboard Style" />
+            android:key="update_interval"
+            android:title="Update Interval"
+            android:summary="How often to update OBD data"
+            android:entries="@array/update_intervals"
+            android:entryValues="@array/update_interval_values"
+            android:defaultValue="1000" />
+
+        <SwitchPreferenceCompat
+            android:key="auto_connect"
+            android:title="Auto-connect"
+            android:summary="Automatically connect to last used device"
+            android:defaultValue="true" />
     </PreferenceCategory>
 
-    <PreferenceCategory android:title="Units">
+    <PreferenceCategory android:title="Display Settings">
         <ListPreference
-            android:defaultValue="mph"
-            android:entries="@array/speed_unit_entries"
+            android:key="temperature_unit"
+            android:title="Temperature Unit"
+            android:summary="Choose temperature display unit"
+            android:entries="@array/temperature_units"
+            android:entryValues="@array/temperature_unit_values"
+            android:defaultValue="celsius" />
+
+        <ListPreference
+            android:key="speed_unit"
+            android:title="Speed Unit"
+            android:summary="Choose speed display unit"
+            android:entries="@array/speed_units"
             android:entryValues="@array/speed_unit_values"
-            android:key="units_preference"
-            android:summary="Choose speed units"
-            android:title="Speed Units" />
+            android:defaultValue="mph" />
 
-        <ListPreference
-            android:defaultValue="celsius"
-            android:entries="@array/temp_unit_entries"
-            android:entryValues="@array/temp_unit_values"
-            android:key="temp_unit_preference"
-            android:summary="Choose temperature units"
-            android:title="Temperature Units" />
+        <SwitchPreferenceCompat
+            android:key="keep_screen_on"
+            android:title="Keep Screen On"
+            android:summary="Prevent screen from turning off"
+            android:defaultValue="true" />
     </PreferenceCategory>
 
-    <PreferenceCategory android:title="Dashboard Elements">
+    <PreferenceCategory android:title="Notifications">
         <SwitchPreferenceCompat
-            android:defaultValue="true"
-            android:key="show_speed_preference"
-            android:summary="Show or hide the speedometer"
-            android:title="Show Speedometer" />
-
-        <SwitchPreferenceCompat
-            android:defaultValue="true"
-            android:key="show_rpm_preference"
-            android:summary="Show or hide the tachometer"
-            android:title="Show Tachometer" />
-
-        <SwitchPreferenceCompat
-            android:defaultValue="true"
-            android:key="show_fuel_preference"
-            android:summary="Show or hide the fuel gauge"
-            android:title="Show Fuel Gauge" />
-
-        <SwitchPreferenceCompat
-            android:defaultValue="true"
-            android:key="show_temp_preference"
-            android:summary="Show or hide the temperature gauge"
-            android:title="Show Temperature Gauge" />
+            android:key="show_notifications"
+            android:title="Show Notifications"
+            android:summary="Display persistent notification with current data"
+            android:defaultValue="true" />
     </PreferenceCategory>
+
+    <PreferenceCategory android:title="Debug Settings">
+        <SwitchPreferenceCompat
+            android:key="debug_mode"
+            android:title="Debug Mode"
+            android:summary="Enable debug logging"
+            android:defaultValue="false" />
+
+        <SwitchPreferenceCompat
+            android:key="log_bluetooth"
+            android:title="Log Bluetooth"
+            android:summary="Log Bluetooth connection events"
+            android:defaultValue="true" />
+    </PreferenceCategory>
+
 </PreferenceScreen>

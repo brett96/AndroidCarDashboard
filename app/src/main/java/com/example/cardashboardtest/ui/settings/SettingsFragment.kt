@@ -95,6 +95,56 @@ class SettingsFragment : PreferenceFragmentCompat() {
             viewModel.setShowTemp(newValue as Boolean)
             true
         }
+
+        // Additional preferences
+        findPreference<ListPreference>("update_interval")?.let { preference ->
+            preference.setOnPreferenceChangeListener { _, newValue ->
+                viewModel.setUpdateInterval(newValue as String)
+                true
+            }
+        }
+
+        findPreference<SwitchPreferenceCompat>("auto_connect")?.let { preference ->
+            preference.setOnPreferenceChangeListener { _, newValue ->
+                viewModel.setAutoConnect(newValue as Boolean)
+                true
+            }
+        }
+
+        findPreference<ListPreference>("temperature_unit")?.let { preference ->
+            preference.setOnPreferenceChangeListener { _, newValue ->
+                viewModel.setTemperatureUnit(newValue as String)
+                true
+            }
+        }
+
+        findPreference<SwitchPreferenceCompat>("show_notifications")?.let { preference ->
+            preference.setOnPreferenceChangeListener { _, newValue ->
+                viewModel.setShowNotifications(newValue as Boolean)
+                true
+            }
+        }
+
+        findPreference<SwitchPreferenceCompat>("keep_screen_on")?.let { preference ->
+            preference.setOnPreferenceChangeListener { _, newValue ->
+                viewModel.setKeepScreenOn(newValue as Boolean)
+                true
+            }
+        }
+
+        findPreference<SwitchPreferenceCompat>("debug_mode")?.let { preference ->
+            preference.setOnPreferenceChangeListener { _, newValue ->
+                viewModel.setDebugMode(newValue as Boolean)
+                true
+            }
+        }
+
+        findPreference<SwitchPreferenceCompat>("log_bluetooth")?.let { preference ->
+            preference.setOnPreferenceChangeListener { _, newValue ->
+                viewModel.setLogBluetooth(newValue as Boolean)
+                true
+            }
+        }
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {

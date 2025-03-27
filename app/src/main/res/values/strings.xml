@@ -10,6 +10,7 @@
     <string name="menu_navigation">Navigation</string>
     <string name="menu_media">Media</string>
     <string name="menu_settings">Settings</string>
+    <string name="menu_logs">Logs</string>
     <string name="speed">Speed</string>
     <string name="rpm">RPM</string>
     <string name="fuel">Fuel Level</string>

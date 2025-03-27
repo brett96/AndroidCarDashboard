@@ -28,4 +28,10 @@
         android:name="com.example.cardashboardtest.ui.settings.SettingsFragment"
         android:label="@string/menu_settings"
         tools:layout="@layout/fragment_settings" />
+
+    <fragment
+        android:id="@+id/nav_logs"
+        android:name="com.example.cardashboardtest.ui.logs.LogsFragment"
+        android:label="@string/menu_logs"
+        tools:layout="@layout/fragment_logs" />
 </navigation>
