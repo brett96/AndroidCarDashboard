@@ -6,9 +6,14 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.snackbar.Snackbar
 import com.example.cardashboardtest.databinding.FragmentLogsBinding
 import com.example.cardashboardtest.model.LogType
+import com.example.cardashboardtest.R
+import kotlinx.coroutines.launch
 
 class LogsFragment : Fragment() {
     private var _binding: FragmentLogsBinding? = null
@@ -29,6 +34,8 @@ class LogsFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         setupRecyclerView()
         setupFilterChips()
+        setupDeleteButton()
+        observeDeleteSuccess()
         observeLogs()
     }
 
@@ -58,6 +65,33 @@ class LogsFragment : Fragment() {
         }
     }
 
+    private fun setupDeleteButton() {
+        binding.clearLogsFab.setOnClickListener {
+            showDeleteConfirmationDialog()
+        }
+    }
+
+    private fun showDeleteConfirmationDialog() {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(getString(R.string.clear_logs))
+            .setMessage(getString(R.string.clear_logs_confirmation))
+            .setPositiveButton(getString(R.string.delete)) { _, _ ->
+                viewModel.clearLogs()
+            }
+            .setNegativeButton(getString(R.string.cancel), null)
+            .show()
+    }
+
+    private fun observeDeleteSuccess() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.deleteSuccess.collect { success ->
+                if (success == true) {
+                    Snackbar.make(binding.root, "All logs deleted", Snackbar.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
     private fun observeLogs() {
         viewModel.logs.observe(viewLifecycleOwner) { logs ->
             adapter.submitList(logs)
@@ -68,4 +102,4 @@ class LogsFragment : Fragment() {
         super.onDestroyView()
         _binding = null
     }
-} 
+}

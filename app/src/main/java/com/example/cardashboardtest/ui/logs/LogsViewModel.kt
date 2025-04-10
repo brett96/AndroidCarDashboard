@@ -8,13 +8,18 @@ import androidx.lifecycle.viewModelScope
 import com.example.cardashboardtest.data.BluetoothLogRepository
 import com.example.cardashboardtest.model.BluetoothLog
 import com.example.cardashboardtest.model.LogType
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class LogsViewModel(application: Application) : AndroidViewModel(application) {
     private val repository: BluetoothLogRepository = BluetoothLogRepository(application)
     private val _logs = MutableLiveData<List<BluetoothLog>>()
     val logs: LiveData<List<BluetoothLog>> = _logs
+
+    private val _deleteSuccess = MutableStateFlow<Boolean?>(null)
+    val deleteSuccess = _deleteSuccess.asStateFlow()
 
     private val activeFilters = mutableSetOf<LogType>()
 
@@ -51,7 +56,9 @@ class LogsViewModel(application: Application) : AndroidViewModel(application) {
     fun clearLogs() {
         viewModelScope.launch {
             repository.deleteAllLogs()
+            _deleteSuccess.value = true
             loadLogs()
+            _deleteSuccess.value = null
         }
     }
-} 
+}

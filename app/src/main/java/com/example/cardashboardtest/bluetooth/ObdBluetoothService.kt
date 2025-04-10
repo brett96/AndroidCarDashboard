@@ -169,15 +169,35 @@ class ObdBluetoothService(private val context: Context) {
             throw e
         }
     }
-    
+
+    private suspend fun logPolledObdData(data: ObdData) {
+        connectedDevice?.let { device ->
+            val message = "OBD Data: RPM=${data.rpm ?: "N/A"}, Speed=${data.speed ?: "N/A"}, " +
+                    "Engine Temp=${data.engineTemp ?: "N/A"}, Fuel Level=${data.fuelLevel ?: "N/A"}, " +
+                    "Voltage=${data.batteryVoltage ?: "N/A"}, Check Engine=${data.checkEngine ?: "N/A"}, " +
+                    "Oil Temp=${data.oilTemp ?: "N/A"}"
+
+            logRepository.insertLog(
+                BluetoothLog(
+                    timestamp = Date(),
+                    deviceName = device.name,
+                    deviceAddress = device.address,
+                    logType = LogType.DATA_READ,
+                    message = message
+                )
+            )
+        }
+    }
+
     private fun startDataPolling() {
         dataPollingJob?.cancel()
         dataPollingJob = coroutineScope.launch {
             try {
                 while (isActive) {
                     try {
-                        pollObdData()
-                        delay(100) // Poll 10 times per second
+                        val currentData = pollObdData()
+                        logPolledObdData(currentData) // Log the data here
+                        delay(500L) // Poll every 500 milliseconds // Poll 10 times per second
                     } catch (e: Exception) {
                         if (e is kotlinx.coroutines.CancellationException) {
                             Log.d(TAG, "Data polling cancelled")
@@ -201,8 +221,8 @@ class ObdBluetoothService(private val context: Context) {
         }
     }
     
-    private suspend fun pollObdData() {
-        try {
+    private suspend fun pollObdData() : ObdData {
+        return try {
             val currentData = ObdData(
                 rpm = readPid("010C")?.let { rpmSmoother.smoothInt(calculateRpm(it)) },
                 speed = readPid("010D")?.let { speedSmoother.smoothInt(it.toInt()) },
@@ -212,41 +232,62 @@ class ObdBluetoothService(private val context: Context) {
                 checkEngine = readPid("0101")?.let { it.toInt() and 0x80 != 0 },
                 oilTemp = readPid("015C")?.let { it.toInt() - 40 }
             )
-            
-            // Only update if we have at least some valid data
-            if (currentData.rpm != null || currentData.speed != null || 
-                currentData.engineTemp != null || currentData.fuelLevel != null || 
-                currentData.batteryVoltage != null || currentData.checkEngine != null || 
-                currentData.oilTemp != null) {
-                _obdData.value = currentData
-                connectedDevice?.let { device ->
-                    logDataRead(device, "Data updated: RPM=${currentData.rpm}, Speed=${currentData.speed}, Temp=${currentData.engineTemp}")
-                }
-            }
+            currentData
+//            // Only update if we have at least some valid data
+//            if (currentData.rpm != null || currentData.speed != null ||
+//                currentData.engineTemp != null || currentData.fuelLevel != null ||
+//                currentData.batteryVoltage != null || currentData.checkEngine != null ||
+//                currentData.oilTemp != null) {
+//                _obdData.value = currentData
+//                connectedDevice?.let { device ->
+//                    logDataRead(device, "Data updated: RPM=${currentData.rpm}, Speed=${currentData.speed}, Temp=${currentData.engineTemp}")
+//                }
+//            }
         } catch (e: Exception) {
-            if (e is kotlinx.coroutines.CancellationException) {
-                throw e
-            }
-            Log.e(TAG, "Error in pollObdData", e)
-            connectedDevice?.let { device ->
-                logError(device, "Data polling error: ${e.message}")
-            }
+//            if (e is kotlinx.coroutines.CancellationException) {
+//                throw e
+//            }
+//            Log.e(TAG, "Error in pollObdData", e)
+//            connectedDevice?.let { device ->
+//                logError(device, "Data polling error: ${e.message}")
+//            }
             throw e
         }
     }
-    
+
     private suspend fun sendCommand(command: String): String? {
         return try {
+            // Check if socket is connected
+            if (bluetoothSocket?.isConnected != true) {
+                Log.e(TAG, "Socket not connected when trying to send command: $command")
+                connectedDevice?.let { device ->
+                    logError(device, "Socket not connected when trying to send command: $command")
+                }
+                reconnect()
+                return null
+            }
+
             // Clear any pending data
             clearBuffer()
-            
+
+            // Log command being sent
+            connectedDevice?.let { device ->
+                logDataRead(device, "Sending command: $command")
+            }
+
             // Send command
             bluetoothSocket?.outputStream?.write((command + "\r").toByteArray())
+            bluetoothSocket?.outputStream?.flush()
             delay(100)
-            
+
             // Read response
             val response = readResponse()
-            
+
+            // Log response received
+            connectedDevice?.let { device ->
+                logDataRead(device, "Received response for $command: $response")
+            }
+
             // Check for errors
             if (response.contains("STOPPED")) {
                 Log.w(TAG, "Device stopped, attempting to reconnect")
@@ -256,7 +297,7 @@ class ObdBluetoothService(private val context: Context) {
                 reconnect()
                 return null
             }
-            
+
             // Check for negative response
             if (response.contains("7F")) {
                 Log.w(TAG, "Negative response received for command: $command")
@@ -265,8 +306,18 @@ class ObdBluetoothService(private val context: Context) {
                 }
                 return null
             }
-            
+
             response
+        } catch (e: IOException) {
+            Log.e(TAG, "IO Error sending command: $command", e)
+            connectedDevice?.let { device ->
+                logError(device, "IO Error sending command: ${e.message}")
+            }
+            // If we get a broken pipe, try to reconnect
+            if (e.message?.contains("Broken pipe") == true) {
+                reconnect()
+            }
+            null
         } catch (e: Exception) {
             Log.e(TAG, "Error sending command: $command", e)
             connectedDevice?.let { device ->
@@ -281,41 +332,72 @@ class ObdBluetoothService(private val context: Context) {
         val response = StringBuilder()
         var attempts = 0
         val maxAttempts = 3
-        
+
         while (attempts < maxAttempts) {
-            val bytes = bluetoothSocket?.inputStream?.read(buffer)
-            if (bytes != null && bytes > 0) {
-                val chunk = String(buffer, 0, bytes).trim()
-                response.append(chunk)
-                
-                // Check if we have a complete response
-                if (chunk.contains(">")) {
-                    break
+            try {
+                // Check if socket is connected before reading
+                if (bluetoothSocket?.isConnected != true) {
+                    Log.e(TAG, "Socket not connected when trying to read response")
+                    throw IOException("Socket not connected")
+                }
+
+                val bytes = bluetoothSocket?.inputStream?.read(buffer)
+                if (bytes != null && bytes > 0) {
+                    val chunk = String(buffer, 0, bytes).trim()
+                    response.append(chunk)
+
+                    // Check if we have a complete response
+                    if (chunk.contains(">")) {
+                        break
+                    }
+                }
+                delay(100)
+                attempts++
+            } catch (e: IOException) {
+                Log.e(TAG, "IO Error reading response", e)
+                if (e.message?.contains("Broken pipe") == true) {
+                    reconnect()
+                    throw e
+                }
+                attempts++
+                if (attempts >= maxAttempts) {
+                    throw e
                 }
             }
-            delay(100)
-            attempts++
         }
-        
+
         return response.toString().trim()
     }
     
     private suspend fun clearBuffer() {
         try {
+            // Check if socket is connected before clearing
+            if (bluetoothSocket?.isConnected != true) {
+                Log.e(TAG, "Socket not connected when trying to clear buffer")
+                return
+            }
+
             val buffer = ByteArray(1024)
             while (bluetoothSocket?.inputStream?.available() ?: 0 > 0) {
                 bluetoothSocket?.inputStream?.read(buffer)
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error clearing buffer", e)
+            if (e is IOException && e.message?.contains("Broken pipe") == true) {
+                reconnect()
+            }
         }
     }
     
     private suspend fun reconnect() {
         try {
+            Log.d(TAG, "Attempting to reconnect...")
             disconnect()
             delay(1000)
-            connectedDevice?.let { connect(it) }
+            connectedDevice?.let { device ->
+                Log.d(TAG, "Reconnecting to device: ${device.name}")
+                connect(device)
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Error reconnecting", e)
             connectedDevice?.let { device ->
