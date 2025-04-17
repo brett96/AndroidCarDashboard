@@ -44,6 +44,9 @@ import android.os.Build
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
 class DashboardFragment : Fragment() {
 
@@ -103,6 +106,7 @@ class DashboardFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         
         setupObservers()
+        setupPersistentErrorObserver()
         setupListeners()
         startSimulation()
         updateTime()
@@ -780,6 +784,26 @@ class DashboardFragment : Fragment() {
 
     private fun showSnackbar(message: String) {
         Snackbar.make(binding.root, message, Snackbar.LENGTH_SHORT).show()
+    }
+
+    private fun setupPersistentErrorObserver() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.showPersistentError.collectLatest { showError ->
+                if (showError) {
+                    showPersistentConnectionErrorDialog()
+                }
+            }
+        }
+    }
+
+    private fun showPersistentConnectionErrorDialog() {
+        if (isAdded) {
+            MaterialAlertDialogBuilder(requireContext())
+                .setTitle("Persistent Connection Error")
+                .setMessage("The connection to the OBD device was lost and could not be re-established. Please check the device and reconnect manually.")
+                .setPositiveButton("OK", null)
+                .show()
+        }
     }
 
     override fun onDestroyView() {
