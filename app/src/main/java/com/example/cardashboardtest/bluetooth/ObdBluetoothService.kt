@@ -244,6 +244,8 @@ class ObdBluetoothService(private val context: Context) {
         val rpm = readPid("010C")?.let { parseRpm(it) }
         val speed = readPid("010D")?.let { parseSpeed(it) }
         val engineTemp = readPid("0105")?.let { parseTemp(it) }
+        // Add a small extra delay before reading Fuel Level, just in case
+        delay(50)
         val fuelLevel = readPid("012F")?.let { parseFuelLevel(it) }
         val batteryVoltage = sendCommand("ATRV")?.let { parseVoltage(it) } // Use ATRV
         val milStatus = readPid("0101")?.let { parseMilStatus(it) }
@@ -323,6 +325,9 @@ class ObdBluetoothService(private val context: Context) {
                 return null
             }
 
+            // Log the raw response *before* cleaning
+            Log.d(TAG, "Raw response before cleaning: '${response.toString().replace("\r", "\\r").replace("\n", "\\n")}'")
+            
             response // Return the potentially processed response
         } catch (e: IOException) {
             Log.e(TAG, "IO Error sending/reading command: $command", e)
