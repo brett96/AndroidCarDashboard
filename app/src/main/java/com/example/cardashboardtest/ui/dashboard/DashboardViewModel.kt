@@ -81,6 +81,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     private val tempSmoother = DataSmoother(10)
     private val fuelSmoother = DataSmoother(20)
     private val voltageSmoother = DataSmoother(10)
+    private val oilTempSmoother = DataSmoother(10)
 
     private val _speed = MutableLiveData<Int>()
     val speed: LiveData<Int> = _speed
@@ -93,6 +94,9 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     private val _engineTemp = MutableLiveData<Int>()
     val engineTemp: LiveData<Int> = _engineTemp
+
+    private val _oilTemp = MutableLiveData<Int?>()
+    val oilTemp: LiveData<Int?> = _oilTemp
 
     private val _oilPressure = MutableLiveData<Int>()
     val oilPressure: LiveData<Int> = _oilPressure
@@ -125,6 +129,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         _rpm.value = 0
         _fuelLevel.value = 75
         _engineTemp.value = 90
+        _oilTemp.value = null
         _engineRunning.value = false
         _gear.value = "P"
         _oilPressure.value = 45
@@ -153,6 +158,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                     _rpm.value = 0
                     _fuelLevel.value = 0
                     _engineTemp.value = 0
+                    _oilTemp.value = null
                     _voltage.value = 0f
                     _checkGauges.value = false
                     _lowOil.value = false
@@ -165,6 +171,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                          _rpm.value = 0
                          _fuelLevel.value = 0
                          _engineTemp.value = 0
+                         _oilTemp.value = null
                          _voltage.value = 0f
                          _checkGauges.value = false
                          _lowOil.value = false
@@ -181,6 +188,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                     data.speed?.let { _speed.value = speedSmoother.smoothInt(it) }
                     data.rpm?.let { _rpm.value = rpmSmoother.smoothInt(it) }
                     data.engineTemp?.let { _engineTemp.value = tempSmoother.smoothInt(it) }
+                    data.oilTemp?.let { _oilTemp.value = oilTempSmoother.smoothInt(it) }
                     data.fuelLevel?.let { _fuelLevel.value = fuelSmoother.smoothInt(it) }
                     data.batteryVoltage?.let { _voltage.value = voltageSmoother.smoothFloat(it) }
                     data.checkEngine?.let { _checkGauges.value = it }
@@ -213,6 +221,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         _rpm.value = 0
         _fuelLevel.value = 75
         _engineTemp.value = 90
+        _oilTemp.value = null
         _voltage.value = 14.4f
         _checkGauges.value = false
         _lowOil.value = false
@@ -251,6 +260,9 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             _engineTemp.value = _engineTemp.value?.let { temp ->
                 (temp + Random.nextInt(-2, 3)).coerceIn(50, 120)
             }
+
+            val currentOilTemp = _oilTemp.value ?: 60
+            _oilTemp.value = (currentOilTemp + Random.nextInt(-1, 2)).coerceIn(50, 130)
 
             _oilPressure.value = _oilPressure.value?.let { pressure ->
                 (pressure + Random.nextInt(-5, 6)).coerceIn(0, 80)
@@ -299,6 +311,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         tempSmoother.reset()
         fuelSmoother.reset()
         voltageSmoother.reset()
+        oilTempSmoother.reset()
     }
 
     override fun onCleared() {

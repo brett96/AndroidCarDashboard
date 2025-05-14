@@ -25,10 +25,11 @@ import com.example.cardashboardtest.databinding.FragmentDashboardBinding
 import com.example.cardashboardtest.model.CarData
 import com.example.cardashboardtest.ui.theme.DashboardTheme
 import com.example.cardashboardtest.ui.theme.ThemeSelectionDialog
-import com.example.cardashboardtest.ui.views.DigitalRPMView
-import com.example.cardashboardtest.ui.views.DigitalSpeedView
 import com.example.cardashboardtest.ui.views.GaugeView
 import com.example.cardashboardtest.ui.views.ProgressGaugeView
+import com.example.cardashboardtest.ui.views.CorvetteSpeedBarView
+import com.example.cardashboardtest.ui.views.CorvetteTachometerCurveView
+import com.example.cardashboardtest.ui.views.CorvetteFuelBarView
 import com.example.cardashboardtest.utils.ThemePreferences
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -111,7 +112,6 @@ class DashboardFragment : Fragment() {
         startSimulation()
         updateTime()
         applyCurrentTheme()
-        setupGaugeCardClickListeners()
     }
 
     @Deprecated("Deprecated in Java")
@@ -174,10 +174,9 @@ class DashboardFragment : Fragment() {
         dialog.setThemeSelectedListener { theme ->
             android.util.Log.d("DashboardFragment", "Theme selection callback received: $theme")
             
-            // Update current theme reference before applying
             currentTheme = theme
+            themePreferences.setTheme(theme)
             
-            // Apply the theme immediately
             handler.post {
                 applyTheme(theme)
                 android.util.Log.d("DashboardFragment", "Theme applied: $theme")
@@ -187,15 +186,16 @@ class DashboardFragment : Fragment() {
     }
 
     private fun applyCurrentTheme() {
-        val currentThemeFromPrefs = themePreferences.getTheme()
-        applyTheme(currentThemeFromPrefs)
+        currentTheme = themePreferences.getTheme()
+        android.util.Log.d("DashboardFragment", "Applying current theme from prefs: $currentTheme")
+        currentTheme?.let { applyTheme(it) }
     }
 
     private fun applyTheme(theme: DashboardTheme) {
         try {
             android.util.Log.d("DashboardFragment", "Starting theme application: $theme")
+            currentTheme = theme
             
-            // Get dashboard content container
             val dashboardContent = binding.root.findViewById<ViewGroup>(R.id.dashboard_content)
             
             if (dashboardContent == null) {
@@ -203,10 +203,8 @@ class DashboardFragment : Fragment() {
                 return
             }
             
-            // Remove existing views
             dashboardContent.removeAllViews()
             
-            // Inflate new layout based on theme
             val layoutRes = when (theme) {
                 DashboardTheme.MODERN -> {
                     android.util.Log.d("DashboardFragment", "Inflating modern dashboard layout")
@@ -218,19 +216,22 @@ class DashboardFragment : Fragment() {
                 }
             }
             
-            // Inflate the new layout
             layoutInflater.inflate(layoutRes, dashboardContent, true)
             
-            // Setup appropriate observers
+            viewModel.speed.removeObservers(viewLifecycleOwner)
+            viewModel.rpm.removeObservers(viewLifecycleOwner)
+            viewModel.fuelLevel.removeObservers(viewLifecycleOwner)
+            viewModel.engineTemp.removeObservers(viewLifecycleOwner)
+            viewModel.oilPressure.removeObservers(viewLifecycleOwner)
+            viewModel.voltage.removeObservers(viewLifecycleOwner)
+            viewModel.engineRunning.removeObservers(viewLifecycleOwner)
+            viewModel.gear.removeObservers(viewLifecycleOwner)
+
             when (theme) {
-                DashboardTheme.MODERN -> setupObservers()
-                DashboardTheme.CORVETTE_1985 -> setupCorvetteObservers()
+                DashboardTheme.MODERN -> setupModernDashboardObserversAndListeners()
+                DashboardTheme.CORVETTE_1985 -> setupCorvetteDashboardObserversAndListeners()
             }
             
-            // Setup listeners after inflating new layout
-            setupListeners()
-            
-            // Force update all displayed values
             handler.post {
                 updateDisplayedValues()
                 android.util.Log.d("DashboardFragment", "Display values updated for theme: $theme")
@@ -242,134 +243,121 @@ class DashboardFragment : Fragment() {
     }
 
     private fun updateDisplayedValues() {
-        // Update all values to ensure they're displayed in the new layout
         android.util.Log.d("DashboardFragment", "Updating displayed values")
         
-        // First handle engine state as it affects other values
-        if (viewModel.engineRunning.value == true) {
-            viewModel.startEngine()
-        } else {
-            viewModel.stopEngine()
+        viewModel.engineRunning.value?.let { running ->
+            if (running) viewModel.startEngine() else viewModel.stopEngine()
         }
-        
-        // Then update speed (which also updates RPM)
-        viewModel.speed.value?.let { 
-            viewModel.setSpeed(it)
-            android.util.Log.d("DashboardFragment", "Setting speed to $it")
-        }
-        
-        // Update gear
-        viewModel.gear.value?.let { 
-            viewModel.setGear(it)
-            android.util.Log.d("DashboardFragment", "Setting gear to $it")
-        }
-
-        // Update other values
-        viewModel.simulateDataChanges() // This will update temp, oil, voltage, fuel and warning lights
+        viewModel.speed.value?.let { viewModel.setSpeed(it) }
+        viewModel.gear.value?.let { viewModel.setGear(it) }
+        viewModel.simulateDataChanges() 
     }
 
-    private fun setupCorvetteObservers() {
-        val dashboardContent = binding.root.findViewById<ViewGroup>(R.id.dashboard_content)
+    private fun setupCorvetteDashboardObserversAndListeners() {
+        val dashboardContent = binding.root.findViewById<ViewGroup>(R.id.dashboard_content) ?: return
+        android.util.Log.d("DashboardFragment", "Setting up Corvette Observers")
 
-        // Observe speed changes for digital display
         viewModel.speed.observe(viewLifecycleOwner) { speed ->
-            dashboardContent?.findViewById<DigitalSpeedView>(R.id.digitalSpeedView)?.setSpeed(speed)
+            dashboardContent.findViewById<CorvetteSpeedBarView>(R.id.speed_bar_graph_placeholder_corvette)?.setSpeed(speed)
+            dashboardContent.findViewById<TextView>(R.id.digital_speed_value_corvette)?.text = speed?.toString() ?: "0"
         }
 
-        // Observe RPM changes for bar graph
         viewModel.rpm.observe(viewLifecycleOwner) { rpm ->
-            dashboardContent?.findViewById<DigitalRPMView>(R.id.digitalRpmView)?.setRPM(rpm / 1000f)
+            val displayRpm = rpm?.let { it / 100 } ?: 0
+            dashboardContent.findViewById<CorvetteTachometerCurveView>(R.id.rpm_bar_graph_placeholder_corvette)?.setRpm(rpm)
+            dashboardContent.findViewById<TextView>(R.id.digital_rpm_value_corvette)?.text = displayRpm.toString()
         }
 
-        // Observe fuel level
         viewModel.fuelLevel.observe(viewLifecycleOwner) { fuel ->
-            dashboardContent?.findViewById<ProgressGaugeView>(R.id.fuelGauge)?.let { gauge ->
-                gauge.setProgress(fuel.toFloat())
-                android.util.Log.d("DashboardFragment", "Updating Corvette fuel gauge to: $fuel")
-            }
+            dashboardContent.findViewById<CorvetteFuelBarView>(R.id.fuel_bar_graph_placeholder_corvette)?.setFuelLevel(fuel)
+            val reserveIndicator = dashboardContent.findViewById<TextView>(R.id.reserve_indicator_corvette)
+            reserveIndicator?.visibility = if (fuel != null && fuel < 15) View.VISIBLE else View.GONE
         }
 
-        // Observe temperature
         viewModel.engineTemp.observe(viewLifecycleOwner) { temp ->
-            dashboardContent?.findViewById<ProgressGaugeView>(R.id.tempGauge)?.setProgress(temp.toFloat() - 50)
+            dashboardContent.findViewById<TextView>(R.id.coolant_temp_value_corvette)?.text = temp?.toString() ?: "0"
+        }
+        
+        viewModel.oilTemp.observe(viewLifecycleOwner) { oilTemp ->
+            dashboardContent.findViewById<TextView>(R.id.oil_temp_value_corvette)?.text = oilTemp?.toString() ?: "0"
         }
 
-        // Observe oil pressure
         viewModel.oilPressure.observe(viewLifecycleOwner) { pressure ->
-            dashboardContent?.findViewById<TextView>(R.id.oilPressureValue)?.text = pressure.toString()
+            dashboardContent.findViewById<TextView>(R.id.oil_pressure_value_corvette)?.text = pressure?.toString() ?: "0"
         }
 
-        // Observe voltage
         viewModel.voltage.observe(viewLifecycleOwner) { voltage ->
-            dashboardContent?.findViewById<TextView>(R.id.voltageValue)?.text = String.format("%.1f", voltage)
+            dashboardContent.findViewById<TextView>(R.id.volts_value_corvette)?.text = String.format(Locale.US, "%.1f", voltage ?: 0.0f)
         }
 
-        // Observe warning lights
-        viewModel.checkGauges.observe(viewLifecycleOwner) { check ->
-            dashboardContent?.findViewById<TextView>(R.id.checkGaugesWarning)?.visibility = 
-                if (check) View.VISIBLE else View.GONE
+        viewModel.checkGauges.observe(viewLifecycleOwner) { milOn ->
+            dashboardContent.findViewById<TextView>(R.id.upshift_indicator_corvette)?.visibility = 
+                if (milOn == true) View.VISIBLE else View.GONE
+        }
+        
+        setupGeneralListeners(dashboardContent)
+        setupGaugeCardClickListenersCorvette(dashboardContent)
+    }
+
+    private fun setupModernDashboardObserversAndListeners() {
+        val dashboardContent = binding.root.findViewById<ViewGroup>(R.id.dashboard_content) ?: return
+        android.util.Log.d("DashboardFragment", "Setting up Modern Observers")
+
+        viewModel.speed.observe(viewLifecycleOwner) { speed ->
+            dashboardContent.findViewById<GaugeView>(R.id.speedGauge)?.speedTo(speed.toFloat(), 500)
+            dashboardContent.findViewById<TextView>(R.id.speedValue)?.text = speed.toString()
         }
 
-        viewModel.lowOil.observe(viewLifecycleOwner) { low ->
-            dashboardContent?.findViewById<TextView>(R.id.lowOilWarning)?.visibility = 
-                if (low) View.VISIBLE else View.GONE
+        viewModel.rpm.observe(viewLifecycleOwner) { rpm ->
+            dashboardContent.findViewById<GaugeView>(R.id.rpmGauge)?.speedTo((rpm / 1000f), 500)
+            dashboardContent.findViewById<TextView>(R.id.rpmValue)?.text = (rpm / 1000f).toString()
         }
 
-        // Observe engine state
+        viewModel.fuelLevel.observe(viewLifecycleOwner) { fuel ->
+            dashboardContent.findViewById<ProgressGaugeView>(R.id.fuelGauge)?.setProgress(fuel.toFloat())
+            dashboardContent.findViewById<TextView>(R.id.fuelValue)?.text = "$fuel%"
+        }
+
+        viewModel.engineTemp.observe(viewLifecycleOwner) { temp ->
+            dashboardContent.findViewById<ProgressGaugeView>(R.id.tempGauge)?.setProgress(temp.toFloat() - 50)
+            val tempFahrenheit = celsiusToFahrenheit(temp ?: 0)
+            dashboardContent.findViewById<TextView>(R.id.tempValue)?.text = "$tempFahrenheit°F"
+        }
+        
         viewModel.engineRunning.observe(viewLifecycleOwner) { running ->
-            dashboardContent?.findViewById<CompoundButton>(R.id.engineSwitch)?.isChecked = running
+            dashboardContent.findViewById<CompoundButton>(R.id.engineSwitch)?.isChecked = running ?: false
         }
 
-        // Observe gear
         viewModel.gear.observe(viewLifecycleOwner) { gear ->
-            dashboardContent?.findViewById<TextView>(R.id.gearValue)?.text = gear
+            dashboardContent.findViewById<TextView>(R.id.gearValue)?.text = gear ?: "P"
         }
+        setupGeneralListeners(dashboardContent)
+        setupGaugeCardClickListenersModern(dashboardContent)
+    }
+
+    private fun setupGeneralListeners(dashboardContent: ViewGroup) {
+        dashboardContent.findViewById<CompoundButton>(R.id.engineSwitch)?.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked) viewModel.startEngine() else viewModel.stopEngine()
+        }
+
+        dashboardContent.findViewById<android.widget.SeekBar>(R.id.speedSeekBar)?.setOnSeekBarChangeListener(object : android.widget.SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: android.widget.SeekBar?, progress: Int, fromUser: Boolean) {
+                if (fromUser && viewModel.engineRunning.value == true) {
+                    viewModel.setSpeed(progress)
+                    updateGear(progress)
+                } else if (viewModel.engineRunning.value == false) {
+                     seekBar?.progress = 0
+                     updateGear(0)
+                }
+            }
+            override fun onStartTrackingTouch(seekBar: android.widget.SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: android.widget.SeekBar?) {}
+        })
     }
 
     private fun setupObservers() {
-        val dashboardContent = binding.root.findViewById<ViewGroup>(R.id.dashboard_content)
-
-        // Observe connection state
         viewModel.connectionState.observe(viewLifecycleOwner) { state ->
             updateConnectionState(state)
-        }
-
-        // Observe speed changes
-        viewModel.speed.observe(viewLifecycleOwner) { speed ->
-            dashboardContent?.findViewById<com.example.cardashboardtest.ui.views.GaugeView>(R.id.speedGauge)?.speedTo(speed.toFloat(), 500)
-            dashboardContent?.findViewById<TextView>(R.id.speedValue)?.text = speed.toString()
-        }
-
-        // Observe RPM changes
-        viewModel.rpm.observe(viewLifecycleOwner) { rpm ->
-            dashboardContent?.findViewById<com.example.cardashboardtest.ui.views.GaugeView>(R.id.rpmGauge)?.speedTo((rpm / 1000f), 500)
-            dashboardContent?.findViewById<TextView>(R.id.rpmValue)?.text = (rpm / 1000f).toString()
-        }
-
-        // Observe fuel level changes
-        viewModel.fuelLevel.observe(viewLifecycleOwner) { fuel ->
-            dashboardContent?.findViewById<ProgressGaugeView>(R.id.fuelGauge)?.let { gauge ->
-                gauge.setProgress(fuel.toFloat())
-                android.util.Log.d("DashboardFragment", "Updating Modern fuel gauge to: $fuel")
-            }
-            dashboardContent?.findViewById<TextView>(R.id.fuelValue)?.text = "$fuel%"
-        }
-
-        // Observe temperature changes
-        viewModel.engineTemp.observe(viewLifecycleOwner) { temp ->
-            dashboardContent?.findViewById<ProgressGaugeView>(R.id.tempGauge)?.setProgress(temp.toFloat() - 50)
-            val tempFahrenheit = celsiusToFahrenheit(temp)
-            dashboardContent?.findViewById<TextView>(R.id.tempValue)?.text = "$tempFahrenheit°F"
-        }
-
-        // Observe engine state
-        viewModel.engineRunning.observe(viewLifecycleOwner) { running ->
-            dashboardContent?.findViewById<CompoundButton>(R.id.engineSwitch)?.isChecked = running
-        }
-
-        // Observe gear
-        viewModel.gear.observe(viewLifecycleOwner) { gear ->
-            dashboardContent?.findViewById<TextView>(R.id.gearValue)?.text = gear
         }
     }
 
@@ -386,31 +374,9 @@ class DashboardFragment : Fragment() {
     }
 
     private fun setupListeners() {
-        val dashboardContent = binding.root.findViewById<ViewGroup>(R.id.dashboard_content)
-
-        // Engine start/stop switch
-        dashboardContent?.findViewById<CompoundButton>(R.id.engineSwitch)?.setOnCheckedChangeListener { _: CompoundButton, isChecked: Boolean ->
-            if (isChecked) {
-                viewModel.startEngine()
-            } else {
-                viewModel.stopEngine()
-            }
-        }
-
-        // Speed control
-        dashboardContent?.findViewById<android.widget.SeekBar>(R.id.speedSeekBar)?.setOnSeekBarChangeListener(object : android.widget.SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: android.widget.SeekBar?, progress: Int, fromUser: Boolean) {
-                if (fromUser && viewModel.engineRunning.value == true) {
-                    viewModel.setSpeed(progress)
-                    // Update gear based on speed
-                    updateGear(progress)
-                } else {
-                    updateGear(0)
-                }
-            }
-            override fun onStartTrackingTouch(seekBar: android.widget.SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: android.widget.SeekBar?) {}
-        })
+        // This method is deprecated. Listeners are now set up in 
+        // setupModernDashboardObserversAndListeners or setupCorvetteDashboardObserversAndListeners
+        // after the respective layout is inflated.
     }
 
     private fun startSimulation() {
@@ -418,7 +384,9 @@ class DashboardFragment : Fragment() {
         timer?.scheduleAtFixedRate(object : TimerTask() {
             override fun run() {
                 handler.post {
-                    viewModel.simulateDataChanges()
+                    if (viewModel.connectionState.value !is ObdBluetoothService.ConnectionState.Connected) {
+                         viewModel.simulateDataChanges()
+                    }
                 }
             }
         }, 1000, 1000)
@@ -433,7 +401,7 @@ class DashboardFragment : Fragment() {
                         binding.root.findViewById<TextView>(R.id.timeValue)?.text = timeFormat.format(Date())
                         handler.postDelayed(this, 1000)
                     } catch (e: Exception) {
-                        // Handle any exceptions that might occur
+                        android.util.Log.w("DashboardFragment", "timeValue TextView not found in current layout.")
                     }
                 }
             }
@@ -441,61 +409,50 @@ class DashboardFragment : Fragment() {
         handler.post(timeRunnable)
     }
 
-    private fun setupGaugeCardClickListeners() {
-        val dashboardContent = binding.root.findViewById<ViewGroup>(R.id.dashboard_content)
-        
-        // For Modern theme
-        dashboardContent?.findViewById<CardView>(R.id.speedCard)?.setOnClickListener {
+    private fun setupGaugeCardClickListenersModern(dashboardContent: ViewGroup) {
+        dashboardContent.findViewById<CardView>(R.id.speedCard)?.setOnClickListener {
             toggleCardExpansion(it as CardView)
         }
-        dashboardContent?.findViewById<CardView>(R.id.rpmCard)?.setOnClickListener {
+        dashboardContent.findViewById<CardView>(R.id.rpmCard)?.setOnClickListener {
             toggleCardExpansion(it as CardView)
         }
-        dashboardContent?.findViewById<CardView>(R.id.fuelCard)?.setOnClickListener {
+        dashboardContent.findViewById<CardView>(R.id.fuelCard)?.setOnClickListener {
             toggleCardExpansion(it as CardView)
         }
-        dashboardContent?.findViewById<CardView>(R.id.tempCard)?.setOnClickListener {
-            toggleCardExpansion(it as CardView)
-        }
-        
-        // For Corvette theme
-        dashboardContent?.findViewById<CardView>(R.id.digitalSpeedCard)?.setOnClickListener {
-            toggleCardExpansion(it as CardView)
-        }
-        dashboardContent?.findViewById<CardView>(R.id.digitalRpmCard)?.setOnClickListener {
+        dashboardContent.findViewById<CardView>(R.id.tempCard)?.setOnClickListener {
             toggleCardExpansion(it as CardView)
         }
     }
+    
+    private fun setupGaugeCardClickListenersCorvette(dashboardContent: ViewGroup) {
+        android.util.Log.d("DashboardFragment", "Corvette click listeners setup: Card expansion is not applicable to this theme.")
+        // No individual cards to click and expand in the Corvette theme as designed.
+        // If specific clickable areas are needed for Corvette, they'd need different handling.
+    }
 
     private fun toggleCardExpansion(cardToExpand: CardView) {
+        if (currentTheme != DashboardTheme.MODERN) {
+            android.util.Log.d("DashboardFragment", "Card expansion skipped for non-Modern theme.")
+            return
+        }
+
         val isExpanded = cardToExpand.tag as? Boolean ?: false
         val dashboardContent = binding.root.findViewById<ViewGroup>(R.id.dashboard_content)
         
-        // Find all cards in the current theme
-        val allCards = when (currentTheme) {
-            DashboardTheme.MODERN -> listOf(
-                dashboardContent?.findViewById<CardView>(R.id.speedCard),
-                dashboardContent?.findViewById<CardView>(R.id.rpmCard),
-                dashboardContent?.findViewById<CardView>(R.id.fuelCard),
-                dashboardContent?.findViewById<CardView>(R.id.tempCard)
-            )
-            DashboardTheme.CORVETTE_1985 -> listOf(
-                dashboardContent?.findViewById<CardView>(R.id.digitalSpeedCard),
-                dashboardContent?.findViewById<CardView>(R.id.digitalRpmCard)
-            )
-            else -> listOf()
-        }
+        val allCards = listOfNotNull(
+            dashboardContent?.findViewById<CardView>(R.id.speedCard),
+            dashboardContent?.findViewById<CardView>(R.id.rpmCard),
+            dashboardContent?.findViewById<CardView>(R.id.fuelCard),
+            dashboardContent?.findViewById<CardView>(R.id.tempCard)
+        )
 
         if (!isExpanded) {
-            // Prepare the card for expansion
             cardToExpand.apply {
-                // Bring card to front before animation
                 elevation = resources.getDimension(R.dimen.expanded_card_elevation)
-                translationZ = 8f // Additional z-translation for expanded state
-                bringToFront() // Ensure it's at the top of the view hierarchy
+                translationZ = 8f 
+                bringToFront() 
             }
 
-            // Calculate center position
             val centerX = (dashboardContent?.width ?: 0) / 2f
             val centerY = (dashboardContent?.height ?: 0) / 2f
             
@@ -505,18 +462,13 @@ class DashboardFragment : Fragment() {
             val translateX = centerX - cardCenterX
             val translateY = centerY - cardCenterY
             
-            // Animate other cards
             allCards.forEach { card ->
-                if (card != null && card != cardToExpand) {
-                    card.animate()
-                        .alpha(0.3f) // Fade but don't completely hide
-                        .setDuration(300)
-                        .start()
+                if (card != cardToExpand) {
+                    card.animate().alpha(0.3f).setDuration(300).start()
                     card.tag = false
                 }
             }
             
-            // Animate the expanding card
             cardToExpand.animate()
                 .translationX(translateX)
                 .translationY(translateY)
@@ -526,28 +478,17 @@ class DashboardFragment : Fragment() {
                 .start()
             
             cardToExpand.tag = true
-            
-            // Increase gauge size
             increaseGaugeSize(cardToExpand)
         } else {
-            // Reset z-ordering and elevation
             cardToExpand.apply {
-                animate()
-                    .translationZ(0f)
-                    .setDuration(300)
-                    .start()
+                animate().translationZ(0f).setDuration(300).start()
                 elevation = resources.getDimension(R.dimen.default_card_elevation)
             }
 
-            // Animate all cards simultaneously
             allCards.forEach { card ->
-                card?.animate()
-                    ?.alpha(1f)
-                    ?.setDuration(300)
-                    ?.start()
+                card.animate().alpha(1f).setDuration(300).start()
             }
             
-            // Reset the expanded card
             cardToExpand.animate()
                 .translationX(0f)
                 .translationY(0f)
@@ -557,167 +498,83 @@ class DashboardFragment : Fragment() {
                 .start()
             
             cardToExpand.tag = false
-            
-            // Reset gauge size
             resetGaugeSize(cardToExpand)
         }
     }
 
     private fun increaseGaugeSize(card: CardView) {
-        when (currentTheme) {
-            DashboardTheme.MODERN -> {
-                when (card.id) {
-                    R.id.speedCard, R.id.rpmCard -> {
-                        val gaugeView = if (card.id == R.id.speedCard) 
-                            card.findViewById<GaugeView>(R.id.speedGauge) 
-                        else 
-                            card.findViewById<GaugeView>(R.id.rpmGauge)
-                        
-                        gaugeView?.animate()
-                            ?.scaleX(1.5f)
-                            ?.scaleY(1.5f)
-                            ?.setDuration(300)
-                            ?.start()
-                        
-                        // Increase text size
-                        val valueText = if (card.id == R.id.speedCard)
-                            card.findViewById<TextView>(R.id.speedValue)
-                        else
-                            card.findViewById<TextView>(R.id.rpmValue)
-                        
-                        valueText?.animate()
-                            ?.scaleX(1.5f)
-                            ?.scaleY(1.5f)
-                            ?.setDuration(300)
-                            ?.start()
-                    }
-                    
-                    R.id.fuelCard, R.id.tempCard -> {
-                        val gaugeView = if (card.id == R.id.fuelCard) 
-                            card.findViewById<ProgressGaugeView>(R.id.fuelGauge) 
-                        else 
-                            card.findViewById<ProgressGaugeView>(R.id.tempGauge)
-                        
-                        gaugeView?.animate()
-                            ?.scaleX(1.5f)
-                            ?.scaleY(1.5f)
-                            ?.setDuration(300)
-                            ?.start()
-                        
-                        // Increase text size
-                        val valueText = if (card.id == R.id.fuelCard)
-                            card.findViewById<TextView>(R.id.fuelValue)
-                        else
-                            card.findViewById<TextView>(R.id.tempValue)
-                        
-                        valueText?.animate()
-                            ?.scaleX(1.5f)
-                            ?.scaleY(1.5f)
-                            ?.setDuration(300)
-                            ?.start()
-                    }
-                }
+        if (currentTheme != DashboardTheme.MODERN) return
+
+        when (card.id) {
+            R.id.speedCard, R.id.rpmCard -> {
+                val gaugeView = if (card.id == R.id.speedCard) 
+                    card.findViewById<GaugeView>(R.id.speedGauge) 
+                else 
+                    card.findViewById<GaugeView>(R.id.rpmGauge)
+                
+                gaugeView?.animate()?.scaleX(1.5f)?.scaleY(1.5f)?.setDuration(300)?.start()
+                
+                val valueText = if (card.id == R.id.speedCard)
+                    card.findViewById<TextView>(R.id.speedValue)
+                else
+                    card.findViewById<TextView>(R.id.rpmValue)
+                
+                valueText?.animate()?.scaleX(1.5f)?.scaleY(1.5f)?.setDuration(300)?.start()
             }
-            DashboardTheme.CORVETTE_1985 -> {
-                when (card.id) {
-                    R.id.digitalSpeedCard -> {
-                        val speedView = card.findViewById<DigitalSpeedView>(R.id.digitalSpeedView)
-                        speedView?.animate()
-                            ?.scaleX(1.5f)
-                            ?.scaleY(1.5f)
-                            ?.setDuration(300)
-                            ?.start()
-                    }
-                    R.id.digitalRpmCard -> {
-                        val rpmView = card.findViewById<DigitalRPMView>(R.id.digitalRpmView)
-                        rpmView?.animate()
-                            ?.scaleX(1.5f)
-                            ?.scaleY(1.5f)
-                            ?.setDuration(300)
-                            ?.start()
-                    }
-                }
+            
+            R.id.fuelCard, R.id.tempCard -> {
+                val gaugeView = if (card.id == R.id.fuelCard) 
+                    card.findViewById<ProgressGaugeView>(R.id.fuelGauge) 
+                else 
+                    card.findViewById<ProgressGaugeView>(R.id.tempGauge)
+                
+                gaugeView?.animate()?.scaleX(1.5f)?.scaleY(1.5f)?.setDuration(300)?.start()
+                
+                val valueText = if (card.id == R.id.fuelCard)
+                    card.findViewById<TextView>(R.id.fuelValue)
+                else
+                    card.findViewById<TextView>(R.id.tempValue)
+                
+                valueText?.animate()?.scaleX(1.5f)?.scaleY(1.5f)?.setDuration(300)?.start()
             }
-            else -> {}
         }
     }
 
     private fun resetGaugeSize(card: CardView) {
-        when (currentTheme) {
-            DashboardTheme.MODERN -> {
-                when (card.id) {
-                    R.id.speedCard, R.id.rpmCard -> {
-                        val gaugeView = if (card.id == R.id.speedCard) 
-                            card.findViewById<GaugeView>(R.id.speedGauge) 
-                        else 
-                            card.findViewById<GaugeView>(R.id.rpmGauge)
-                        
-                        gaugeView?.animate()
-                            ?.scaleX(1f)
-                            ?.scaleY(1f)
-                            ?.setDuration(300)
-                            ?.start()
-                        
-                        // Reset text size
-                        val valueText = if (card.id == R.id.speedCard)
-                            card.findViewById<TextView>(R.id.speedValue)
-                        else
-                            card.findViewById<TextView>(R.id.rpmValue)
-                        
-                        valueText?.animate()
-                            ?.scaleX(1f)
-                            ?.scaleY(1f)
-                            ?.setDuration(300)
-                            ?.start()
-                    }
-                    
-                    R.id.fuelCard, R.id.tempCard -> {
-                        val gaugeView = if (card.id == R.id.fuelCard) 
-                            card.findViewById<ProgressGaugeView>(R.id.fuelGauge) 
-                        else 
-                            card.findViewById<ProgressGaugeView>(R.id.tempGauge)
-                        
-                        gaugeView?.animate()
-                            ?.scaleX(1f)
-                            ?.scaleY(1f)
-                            ?.setDuration(300)
-                            ?.start()
-                        
-                        // Reset text size
-                        val valueText = if (card.id == R.id.fuelCard)
-                            card.findViewById<TextView>(R.id.fuelValue)
-                        else
-                            card.findViewById<TextView>(R.id.tempValue)
-                        
-                        valueText?.animate()
-                            ?.scaleX(1f)
-                            ?.scaleY(1f)
-                            ?.setDuration(300)
-                            ?.start()
-                    }
-                }
+        if (currentTheme != DashboardTheme.MODERN) return
+
+        when (card.id) {
+            R.id.speedCard, R.id.rpmCard -> {
+                val gaugeView = if (card.id == R.id.speedCard) 
+                    card.findViewById<GaugeView>(R.id.speedGauge) 
+                else 
+                    card.findViewById<GaugeView>(R.id.rpmGauge)
+                
+                gaugeView?.animate()?.scaleX(1f)?.scaleY(1f)?.setDuration(300)?.start()
+                
+                val valueText = if (card.id == R.id.speedCard)
+                    card.findViewById<TextView>(R.id.speedValue)
+                else
+                    card.findViewById<TextView>(R.id.rpmValue)
+                
+                valueText?.animate()?.scaleX(1f)?.scaleY(1f)?.setDuration(300)?.start()
             }
-            DashboardTheme.CORVETTE_1985 -> {
-                when (card.id) {
-                    R.id.digitalSpeedCard -> {
-                        val speedView = card.findViewById<DigitalSpeedView>(R.id.digitalSpeedView)
-                        speedView?.animate()
-                            ?.scaleX(1f)
-                            ?.scaleY(1f)
-                            ?.setDuration(300)
-                            ?.start()
-                    }
-                    R.id.digitalRpmCard -> {
-                        val rpmView = card.findViewById<DigitalRPMView>(R.id.digitalRpmView)
-                        rpmView?.animate()
-                            ?.scaleX(1f)
-                            ?.scaleY(1f)
-                            ?.setDuration(300)
-                            ?.start()
-                    }
-                }
+            
+            R.id.fuelCard, R.id.tempCard -> {
+                val gaugeView = if (card.id == R.id.fuelCard) 
+                    card.findViewById<ProgressGaugeView>(R.id.fuelGauge) 
+                else 
+                    card.findViewById<ProgressGaugeView>(R.id.tempGauge)
+                
+                gaugeView?.animate()?.scaleX(1f)?.scaleY(1f)?.setDuration(300)?.start()
+                
+                val valueText = if (card.id == R.id.fuelCard)
+                    card.findViewById<TextView>(R.id.fuelValue)
+                else
+                    card.findViewById<TextView>(R.id.tempValue)
+                
+                valueText?.animate()?.scaleX(1f)?.scaleY(1f)?.setDuration(300)?.start()
             }
-            else -> {}
         }
     }
 
@@ -728,11 +585,9 @@ class DashboardFragment : Fragment() {
 
         when {
             missingPermissions.isEmpty() -> {
-                // All permissions are granted, proceed with Bluetooth connection
                 proceedWithBluetoothConnection()
             }
             else -> {
-                // Request the missing permissions
                 requestPermissionLauncher.launch(missingPermissions.toTypedArray())
             }
         }
@@ -758,15 +613,17 @@ class DashboardFragment : Fragment() {
     }
 
     private fun showError(title: String, message: String) {
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle(title)
-            .setMessage(message)
-            .setPositiveButton("OK", null)
-            .show()
+        if(isAdded) {
+            MaterialAlertDialogBuilder(requireContext())
+                .setTitle(title)
+                .setMessage(message)
+                .setPositiveButton("OK", null)
+                .show()
+        }
     }
 
     private fun updateConnectionState(state: ObdBluetoothService.ConnectionState) {
-        activity?.invalidateOptionsMenu() // This will trigger onPrepareOptionsMenu
+        activity?.invalidateOptionsMenu()
 
         when (state) {
             is ObdBluetoothService.ConnectionState.Connected -> {
@@ -783,7 +640,9 @@ class DashboardFragment : Fragment() {
     }
 
     private fun showSnackbar(message: String) {
-        Snackbar.make(binding.root, message, Snackbar.LENGTH_SHORT).show()
+        if(isAdded) {
+             Snackbar.make(binding.root, message, Snackbar.LENGTH_SHORT).show()
+        }
     }
 
     private fun setupPersistentErrorObserver() {
@@ -808,7 +667,6 @@ class DashboardFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
-        // Cancel all pending handler callbacks to prevent memory leaks
         timer?.cancel()
         handler.removeCallbacksAndMessages(null)
         _binding = null

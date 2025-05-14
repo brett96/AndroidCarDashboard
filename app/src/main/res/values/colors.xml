@@ -19,7 +19,6 @@
     <!-- Corvette Theme Colors -->
     <color name="corvette_background">#000000</color>
     <color name="corvette_gauge_background">#1A1A1A</color>
-    <color name="corvette_text">#FF4444</color>
     <color name="corvette_accent">#FF0000</color>
     <color name="corvette_warning">#FF6600</color>
 
@@ -27,4 +26,30 @@
     <color name="success_color">#4CAF50</color>
     <color name="warning_color">#FFC107</color>
     <color name="info_color">#2196F3</color>
+
+    <!-- Standard App Colors -->
+    <color name="purple_200">#FFBB86FC</color>
+    <color name="purple_500">#FF6200EE</color>
+    <color name="purple_700">#FF3700B3</color>
+    <color name="teal_200">#FF03DAC5</color>
+    <color name="teal_700">#FF018786</color>
+
+    <!-- Theme Colors (from build error) -->
+    <color name="colorPrimary">#FF8C00</color> <!-- Dark Orange -->
+    <color name="colorPrimaryDark">#CC7000</color> <!-- Darker Orange -->
+    <color name="colorAccent">#FFA500</color>    <!-- Orange Accent -->
+
+    <!-- Corvette Theme Specific Colors -->
+    <color name="corvette_text">#FFFFFF</color>        <!-- White for some primary text -->
+    <color name="corvette_text_dim">#BF8C00</color>   <!-- Dimmer Amber/Orange -->
+    <color name="corvette_green_gauge">#00FF00</color> <!-- Bright Green for gauges -->
+    <color name="corvette_yellow_gauge">#FFFF00</color><!-- Bright Yellow for gauges -->
+    <color name="corvette_red_gauge">#FF0000</color>    <!-- Bright Red for gauges (matches warning) -->
+
+    <!-- Modern Theme Specific Colors (Example) -->
+    <color name="modern_background">#F5F5F5</color>
+    <color name="modern_gauge_background">#FFFFFF</color>
+    <color name="modern_accent">@color/purple_500</color>
+    <color name="modern_text_primary">#212121</color>
+    <color name="modern_text_secondary">#757575</color>
 </resources>
