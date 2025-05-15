@@ -41,7 +41,7 @@
 
     <!-- Corvette Theme Specific Colors -->
     <color name="corvette_text">#FFFFFF</color>        <!-- White for some primary text -->
-    <color name="corvette_text_dim">#BF8C00</color>   <!-- Dimmer Amber/Orange -->
+    <color name="corvette_text_dim">#FFA000</color>   <!-- Dimmer Amber/Orange -->
     <color name="corvette_green_gauge">#00FF00</color> <!-- Bright Green for gauges -->
     <color name="corvette_yellow_gauge">#FFFF00</color><!-- Bright Yellow for gauges -->
     <color name="corvette_red_gauge">#FF0000</color>    <!-- Bright Red for gauges (matches warning) -->
@@ -52,4 +52,41 @@
     <color name="modern_accent">@color/purple_500</color>
     <color name="modern_text_primary">#212121</color>
     <color name="modern_text_secondary">#757575</color>
+
+    <!-- Nissan 280ZX Theme Colors -->
+    <color name="nissan_background">#FF000000</color>
+    <color name="nissan_primary_text">#FFFF8C00</color> <!-- DarkOrange -->
+    <color name="nissan_secondary_text">#FFFF4500</color> <!-- OrangeRed for less emphasis -->
+    <color name="nissan_gauge_segment_off">#404040</color>
+    <color name="nissan_gauge_segment_on">#FFFF8C00</color>
+
+    <color name="nissan_background_dark">#FF000000</color> <!-- Black for elements like bottom bar -->
+    <color name="nissan_accent_orange">#FFFF8C00</color> <!-- Dark Orange / Amber -->
+    <color name="nissan_accent_yellow">#FFFFFF00</color> <!-- Bright Yellow -->
+    <color name="nissan_accent_blue">#FF00BFFF</color>   <!-- Deep Sky Blue -->
+    <color name="nissan_warning_red">#FFFF0000</color>   <!-- Bright Red for warning lights -->
+
+    <!-- Digital RPM View -->
+    <color name="digital_rpm_bar_color">#FF4CAF50</color> <!-- Green for RPM bar -->
+    <color name="digital_rpm_bar_background_color">#FF303030</color>
+
+    <!-- Digital Speed View -->
+    <color name="digital_speed_text_color">#FFFF5722</color> <!-- Orange for speed text -->
+    <color name="digital_speed_background_color">#00000000</color> <!-- Transparent background -->
+
+    <!-- Warning Light -->
+    <color name="warning_light_on">#FFFF0000</color> <!-- Red when on -->
+    <color name="warning_light_off">#40FF0000</color> <!-- Dim Red when off (transparent) -->
+    <color name="warning_light_text_color">#FFFFFFFF</color> <!-- White text -->
+
+    <!-- Specific Gauge Colors -->
+    <color name="speed_gauge_needle">#D32F2F</color> <!-- Red -->
+    <color name="rpm_gauge_needle">#D32F2F</color>   <!-- Red -->
+    <color name="fuel_gauge_progress">#4CAF50</color><!-- Green -->
+    <color name="temp_gauge_progress">#2196F3</color><!-- Blue -->
+
+    <!-- Default Card Colors -->
+    <color name="card_background_default">#FFFFFF</color>
+    <color name="card_background_expanded">#E0E0E0</color>
+
 </resources>

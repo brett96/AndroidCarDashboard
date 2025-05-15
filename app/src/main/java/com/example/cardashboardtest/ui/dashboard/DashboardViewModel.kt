@@ -119,6 +119,22 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     private val _connectionState = MutableLiveData<ObdBluetoothService.ConnectionState>()
     val connectionState: LiveData<ObdBluetoothService.ConnectionState> = _connectionState
 
+    // Nissan Theme Specific Indicators
+    private val _lowFuelWarning = MutableLiveData<Boolean>(false)
+    val lowFuelWarning: LiveData<Boolean> = _lowFuelWarning
+
+    private val _brakeWarning = MutableLiveData<Boolean>(false)
+    val brakeWarning: LiveData<Boolean> = _brakeWarning // Example, can be tied to handbrake status
+
+    private val _doorAjarWarning = MutableLiveData<Boolean>(false)
+    val doorAjarWarning: LiveData<Boolean> = _doorAjarWarning
+
+    private val _lightsOnIndicator = MutableLiveData<Boolean>(false)
+    val lightsOnIndicator: LiveData<Boolean> = _lightsOnIndicator
+
+    private val _beltsWarning = MutableLiveData<Boolean>(true) // Default to on, assume needs action
+    val beltsWarning: LiveData<Boolean> = _beltsWarning
+
     private val _showPersistentError = MutableStateFlow(false)
     val showPersistentError: StateFlow<Boolean> = _showPersistentError.asStateFlow()
 
@@ -136,6 +152,13 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         _voltage.value = 14.4f
         _checkGauges.value = false
         _lowOil.value = false
+
+        // Initialize Nissan indicators
+        _lowFuelWarning.value = false
+        _brakeWarning.value = false // Or true if handbrake is on by default
+        _doorAjarWarning.value = false
+        _lightsOnIndicator.value = false
+        _beltsWarning.value = true // Start with belts warning on
 
         obdService.connectionState
             .onEach { state ->
@@ -164,6 +187,12 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                     _lowOil.value = false
                     _engineRunning.value = false
                     _gear.value = "P"
+
+                    _lowFuelWarning.value = false
+                    _brakeWarning.value = false
+                    _doorAjarWarning.value = false
+                    _lightsOnIndicator.value = false
+                    _beltsWarning.value = true
                 } else {
                     if (!useSimulatedData) {
                          resetSmoothers()
@@ -177,6 +206,12 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                          _lowOil.value = false
                          _engineRunning.value = false
                          _gear.value = "P"
+
+                        _lowFuelWarning.value = false
+                        _brakeWarning.value = false
+                        _doorAjarWarning.value = false
+                        _lightsOnIndicator.value = false
+                        _beltsWarning.value = true
                     }
                 }
             }
@@ -198,6 +233,20 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                     if (data.speed != null) {
                         updateGear(data.speed)
                     }
+
+                    _checkGauges.value = _engineTemp.value!! > 110 || _oilPressure.value!! < 20
+                    _lowOil.value = _oilPressure.value!! < 10
+
+                    // Simulate other warnings
+                    _lowFuelWarning.value = (_fuelLevel.value ?: 100) < 15
+                    // Randomly toggle door ajar or brake warning for simulation
+                    if (Random.nextInt(0, 100) < 5) { 
+                        _doorAjarWarning.value = !(_doorAjarWarning.value ?: false)
+                    }
+                    if (Random.nextInt(0, 100) < 3) {
+                        _brakeWarning.value = !(_brakeWarning.value ?: false)
+                    }
+                     _lightsOnIndicator.value = _engineRunning.value == true // Simple: lights on if engine is on
                 }
             }
             .launchIn(viewModelScope)
@@ -227,11 +276,18 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         _lowOil.value = false
         _engineRunning.value = false
         _gear.value = "P"
+
+        _lowFuelWarning.value = false
+        _brakeWarning.value = false
+        _doorAjarWarning.value = false
+        _lightsOnIndicator.value = false
+        _beltsWarning.value = true
     }
 
     fun startEngine() {
         _engineRunning.value = true
         _rpm.value = 1000
+        _beltsWarning.value = false // Assume belts are on once engine starts
         if (useSimulatedData) {
             simulateDataChanges()
         }
@@ -276,6 +332,17 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
             _checkGauges.value = _engineTemp.value!! > 110 || _oilPressure.value!! < 20
             _lowOil.value = _oilPressure.value!! < 10
+
+            // Simulate other warnings
+            _lowFuelWarning.value = (_fuelLevel.value ?: 100) < 15
+            // Randomly toggle door ajar or brake warning for simulation
+            if (Random.nextInt(0, 100) < 5) { 
+                _doorAjarWarning.value = !(_doorAjarWarning.value ?: false)
+            }
+            if (Random.nextInt(0, 100) < 3) {
+                _brakeWarning.value = !(_brakeWarning.value ?: false)
+            }
+             _lightsOnIndicator.value = _engineRunning.value == true // Simple: lights on if engine is on
         }
     }
 

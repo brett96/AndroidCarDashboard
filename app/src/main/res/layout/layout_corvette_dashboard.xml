@@ -52,7 +52,7 @@
         app:layout_constraintGuide_percent="0.90" />
 
     <!-- Speedometer Area (Left) -->
-    <com.example.cardashboardtest.ui.views.CorvetteSpeedBarView
+    <com.example.cardashboardtest.ui.views.CorvetteSpeedCurveView
         android:id="@+id/speed_bar_graph_placeholder_corvette"
         android:layout_width="0dp"
         android:layout_height="0dp"
@@ -199,8 +199,8 @@
 
         <com.example.cardashboardtest.ui.views.CorvetteFuelBarView
             android:id="@+id/fuel_bar_graph_placeholder_corvette"
-            android:layout_width="match_parent"
-            android:layout_height="30dp"
+            android:layout_width="30dp"
+            android:layout_height="120dp"
             android:layout_marginStart="16dp"
             android:layout_marginEnd="16dp" />
 

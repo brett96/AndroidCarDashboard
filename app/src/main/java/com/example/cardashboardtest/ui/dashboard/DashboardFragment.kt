@@ -28,8 +28,11 @@ import com.example.cardashboardtest.ui.theme.ThemeSelectionDialog
 import com.example.cardashboardtest.ui.views.GaugeView
 import com.example.cardashboardtest.ui.views.ProgressGaugeView
 import com.example.cardashboardtest.ui.views.CorvetteSpeedBarView
+import com.example.cardashboardtest.ui.views.CorvetteSpeedCurveView
 import com.example.cardashboardtest.ui.views.CorvetteTachometerCurveView
 import com.example.cardashboardtest.ui.views.CorvetteFuelBarView
+import com.example.cardashboardtest.ui.views.NissanGaugeBarView
+import com.example.cardashboardtest.ui.views.NissanVerticalGaugeBarView
 import com.example.cardashboardtest.utils.ThemePreferences
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -214,6 +217,10 @@ class DashboardFragment : Fragment() {
                     android.util.Log.d("DashboardFragment", "Inflating Corvette dashboard layout")
                     R.layout.layout_corvette_dashboard
                 }
+                DashboardTheme.NISSAN_280ZX -> {
+                    android.util.Log.d("DashboardFragment", "Inflating Nissan 280ZX dashboard layout")
+                    R.layout.layout_nissan_280zx_dashboard
+                }
             }
             
             layoutInflater.inflate(layoutRes, dashboardContent, true)
@@ -230,6 +237,7 @@ class DashboardFragment : Fragment() {
             when (theme) {
                 DashboardTheme.MODERN -> setupModernDashboardObserversAndListeners()
                 DashboardTheme.CORVETTE_1985 -> setupCorvetteDashboardObserversAndListeners()
+                DashboardTheme.NISSAN_280ZX -> setupNissan280zxDashboardObserversAndListeners()
             }
             
             handler.post {
@@ -258,7 +266,7 @@ class DashboardFragment : Fragment() {
         android.util.Log.d("DashboardFragment", "Setting up Corvette Observers")
 
         viewModel.speed.observe(viewLifecycleOwner) { speed ->
-            dashboardContent.findViewById<CorvetteSpeedBarView>(R.id.speed_bar_graph_placeholder_corvette)?.setSpeed(speed)
+            dashboardContent.findViewById<CorvetteSpeedCurveView>(R.id.speed_bar_graph_placeholder_corvette)?.setSpeed(speed)
             dashboardContent.findViewById<TextView>(R.id.digital_speed_value_corvette)?.text = speed?.toString() ?: "0"
         }
 
@@ -323,7 +331,7 @@ class DashboardFragment : Fragment() {
             val tempFahrenheit = celsiusToFahrenheit(temp ?: 0)
             dashboardContent.findViewById<TextView>(R.id.tempValue)?.text = "$tempFahrenheit°F"
         }
-        
+
         viewModel.engineRunning.observe(viewLifecycleOwner) { running ->
             dashboardContent.findViewById<CompoundButton>(R.id.engineSwitch)?.isChecked = running ?: false
         }
@@ -333,6 +341,98 @@ class DashboardFragment : Fragment() {
         }
         setupGeneralListeners(dashboardContent)
         setupGaugeCardClickListenersModern(dashboardContent)
+    }
+
+    private fun setupNissan280zxDashboardObserversAndListeners() {
+        val dashboardContent = binding.root.findViewById<ViewGroup>(R.id.dashboard_content) ?: return
+        android.util.Log.d("DashboardFragment", "Setting up Nissan 280ZX Observers")
+
+        val tachoGauge = dashboardContent.findViewById<NissanVerticalGaugeBarView>(R.id.tachometer_gauge_nissan)
+        tachoGauge?.setMaxValue(8000f) // Max RPM
+        tachoGauge?.setSegmentCount(16)  // Number of segments on the tacho
+
+        val fuelGaugeVertical = dashboardContent.findViewById<NissanVerticalGaugeBarView>(R.id.fuel_gauge_nissan_vertical)
+        fuelGaugeVertical?.setMaxValue(100f) // Fuel percentage
+        fuelGaugeVertical?.setSegmentCount(8)  // Number of segments for fuel
+
+        val oilTempGauge = dashboardContent.findViewById<NissanVerticalGaugeBarView>(R.id.oil_temp_gauge_nissan)
+        oilTempGauge?.setMaxValue(300f) // Max Oil Temp in Fahrenheit
+        oilTempGauge?.setSegmentCount(8)   // Number of segments for oil temp
+
+        // Find indicator lights (for future dynamic updates)
+        val indicatorBrake = dashboardContent.findViewById<TextView>(R.id.indicator_brake_nissan)
+        val indicatorLowFuel = dashboardContent.findViewById<TextView>(R.id.indicator_low_fuel_nissan)
+        val indicatorBelts = dashboardContent.findViewById<TextView>(R.id.indicator_belts_nissan)
+        val indicatorLightsOn = dashboardContent.findViewById<TextView>(R.id.indicator_lights_on_nissan)
+        val indicatorDoorAjar = dashboardContent.findViewById<TextView>(R.id.indicator_door_ajar_nissan)
+
+        viewModel.speed.observe(viewLifecycleOwner) { speedKmH ->
+            val speedMph = speedKmH?.let { (it * 0.621371).toInt() } ?: 0
+            dashboardContent.findViewById<TextView>(R.id.speedometer_value_nissan)?.text = String.format(Locale.US, "%03d", speedMph)
+            // Speed unit is set in XML as MPH
+        }
+
+        viewModel.rpm.observe(viewLifecycleOwner) { rpm ->
+            tachoGauge?.setValue(rpm?.toFloat() ?: 0f)
+            val displayRpm = rpm?.let { (it / 100).coerceAtLeast(0) } ?: 0
+            dashboardContent.findViewById<TextView>(R.id.rpm_value_nissan)?.text = String.format(Locale.US, "%02d", displayRpm)
+        }
+
+        viewModel.fuelLevel.observe(viewLifecycleOwner) { fuel ->
+            fuelGaugeVertical?.setValue(fuel?.toFloat() ?: 0f)
+            dashboardContent.findViewById<TextView>(R.id.fuel_value_nissan)?.text = "${fuel ?: 0}%"
+            indicatorLowFuel?.visibility = if (fuel != null && fuel < 15) View.VISIBLE else View.GONE
+        }
+
+        viewModel.engineTemp.observe(viewLifecycleOwner) { tempCelsius ->
+            val tempFahrenheit = tempCelsius?.let { celsiusToFahrenheit(it) } ?: 0
+            // The main coolant temp gauge in the reference is usually an analog representation
+            // For now, we update the text display in the bottom cluster
+            dashboardContent.findViewById<TextView>(R.id.temp_value_nissan)?.text = "${tempFahrenheit}"
+            // Unit is set to °F in XML for R.id.temp_value_nissan's parent
+        }
+
+        viewModel.oilTemp.observe(viewLifecycleOwner) { oilTempCelsius ->
+            val oilTempFahrenheit = oilTempCelsius?.let { celsiusToFahrenheit(it) } ?: 0
+            oilTempGauge?.setValue(oilTempFahrenheit.toFloat())
+            dashboardContent.findViewById<TextView>(R.id.oil_temp_value_nissan)?.text = "${oilTempFahrenheit}°F"
+        }
+
+        viewModel.oilPressure.observe(viewLifecycleOwner) { pressure ->
+            // Assuming pressure is in PSI from ViewModel
+            dashboardContent.findViewById<TextView>(R.id.oil_pressure_value_nissan)?.text = 
+                if (pressure != null) String.format(Locale.US, "%.1f", pressure.toFloat()) else "--.-"
+            // Unit is set to PSI in XML
+        }
+
+        viewModel.voltage.observe(viewLifecycleOwner) { voltage ->
+            dashboardContent.findViewById<TextView>(R.id.voltage_value_nissan)?.text = 
+                if (voltage != null) String.format(Locale.US, "%.1f", voltage) else "--.-"
+        }
+        
+        // Observe Nissan specific indicator LiveData
+        viewModel.lowFuelWarning.observe(viewLifecycleOwner) { isWarning ->
+            indicatorLowFuel?.visibility = if (isWarning) View.VISIBLE else View.GONE
+        }
+        viewModel.brakeWarning.observe(viewLifecycleOwner) { isWarning ->
+            indicatorBrake?.visibility = if (isWarning) View.VISIBLE else View.GONE
+        }
+        viewModel.doorAjarWarning.observe(viewLifecycleOwner) { isWarning ->
+            indicatorDoorAjar?.visibility = if (isWarning) View.VISIBLE else View.GONE
+        }
+        viewModel.lightsOnIndicator.observe(viewLifecycleOwner) { isOn ->
+            if (isOn) {
+                indicatorLightsOn?.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.nissan_primary_text))
+                indicatorLightsOn?.setTextColor(ContextCompat.getColor(requireContext(), R.color.nissan_background))
+            } else {
+                indicatorLightsOn?.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.nissan_gauge_segment_off))
+                indicatorLightsOn?.setTextColor(ContextCompat.getColor(requireContext(), R.color.nissan_secondary_text))
+            }
+            indicatorLightsOn?.visibility = if (isOn) View.VISIBLE else View.INVISIBLE // Or GONE
+        }
+        viewModel.beltsWarning.observe(viewLifecycleOwner) { isWarning ->
+            indicatorBelts?.visibility = if (isWarning) View.VISIBLE else View.GONE
+        }
     }
 
     private fun setupGeneralListeners(dashboardContent: ViewGroup) {
@@ -347,7 +447,7 @@ class DashboardFragment : Fragment() {
                     updateGear(progress)
                 } else if (viewModel.engineRunning.value == false) {
                      seekBar?.progress = 0
-                     updateGear(0)
+                    updateGear(0)
                 }
             }
             override fun onStartTrackingTouch(seekBar: android.widget.SeekBar?) {}
@@ -385,7 +485,7 @@ class DashboardFragment : Fragment() {
             override fun run() {
                 handler.post {
                     if (viewModel.connectionState.value !is ObdBluetoothService.ConnectionState.Connected) {
-                         viewModel.simulateDataChanges()
+                    viewModel.simulateDataChanges()
                     }
                 }
             }

@@ -26,4 +26,78 @@
     <style name="Theme.CarDashboardTest.PopupOverlay" parent="ThemeOverlay.MaterialComponents.Light">
         <!-- Customize the Popup overlay theme here if needed -->
     </style>
+
+    <!-- Nissan 280ZX Theme Specific Styles -->
+    <style name="NissanIndicatorLabel">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">@color/nissan_secondary_text</item>
+        <item name="android:textSize">10sp</item>
+        <item name="android:fontFamily">monospace</item>
+    </style>
+
+    <style name="NissanIndicatorValue">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">@color/nissan_primary_text</item>
+        <item name="android:textSize">18sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:fontFamily">monospace</item>
+    </style>
+    
+    <style name="NissanGaugeLabel">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">@color/nissan_secondary_text</item>
+        <item name="android:textSize">10sp</item>
+        <item name="android:fontFamily">monospace</item>
+        <item name="android:layout_marginBottom">2dp</item>
+    </style>
+
+    <style name="NissanGaugeTextValue">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">@color/nissan_primary_text</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:fontFamily">monospace</item>
+        <item name="android:layout_marginTop">2dp</item>
+    </style>
+
+    <style name="NissanGaugeTextValue.Small">
+        <item name="android:textSize">12sp</item>
+    </style>
+    
+    <style name="NissanGaugeUnitLabel">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">@color/nissan_secondary_text</item>
+        <item name="android:textSize">8sp</item>
+        <item name="android:fontFamily">monospace</item>
+        <item name="android:layout_marginTop">1dp</item>
+    </style>
+
+    <style name="NissanIndicatorLight">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:paddingStart">6dp</item>
+        <item name="android:paddingEnd">6dp</item>
+        <item name="android:paddingTop">2dp</item>
+        <item name="android:paddingBottom">2dp</item>
+        <item name="android:textSize">10sp</item>
+        <item name="android:fontFamily">monospace</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:gravity">center</item>
+        <item name="android:minWidth">60dp</item> <!-- Ensure lights have some width -->
+    </style>
+
+    <style name="NissanIndicatorLight.Warning">
+        <item name="android:background">@color/nissan_primary_text</item>
+        <item name="android:textColor">@color/nissan_background</item> <!-- Text color black for contrast -->
+    </style>
+
+    <style name="NissanIndicatorLight.Info">
+        <item name="android:background">@color/nissan_gauge_segment_off</item> <!-- Dim background -->
+        <item name="android:textColor">@color/nissan_secondary_text</item>
+    </style>
+
 </resources>

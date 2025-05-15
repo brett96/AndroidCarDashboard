@@ -15,4 +15,22 @@
         <attr name="gaugeTitle" />
         <attr name="progressColor" format="color" />
     </declare-styleable>
+
+    <!-- Attributes for NissanGaugeBarView -->
+    <declare-styleable name="NissanGaugeBarView">
+        <attr name="max_value" format="float" />
+        <attr name="segment_count" format="integer" />
+        <attr name="segment_color" format="color" />
+        <attr name="segment_off_color" format="color" />
+        <attr name="bar_background_color" format="color" />
+    </declare-styleable>
+
+    <!-- Attributes for NissanVerticalGaugeBarView -->
+    <declare-styleable name="NissanVerticalGaugeBarView">
+        <attr name="max_value" />
+        <attr name="segment_count" />
+        <attr name="segment_color" />
+        <attr name="segment_off_color" />
+        <attr name="bar_background_color" />
+    </declare-styleable>
 </resources>
